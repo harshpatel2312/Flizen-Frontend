@@ -1,0 +1,64 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  @apply bg-background text-on-surface font-body-md antialiased;
+}
+
+body {
+  min-height: 100vh;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* Custom animation for SVG paths */
+@keyframes dash {
+  to {
+    stroke-dashoffset: -1000;
+  }
+}
+
+.animate-dash {
+  animation: dash 20s linear infinite;
+}
+
+/* Material Symbols font */
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  display: inline-block;
+  line-height: 1;
+  text-transform: none;
+  letter-spacing: normal;
+  word-wrap: normal;
+  white-space: nowrap;
+  direction: ltr;
+}
+
+/* Input styling */
+input {
+  @apply outline-none;
+}
+
+input::placeholder {
+  @apply text-outline-variant;
+}
+
+/* Button reset */
+button {
+  @apply cursor-pointer;
+}
