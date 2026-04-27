@@ -1,4 +1,4 @@
-# Flizen Premium Booking Dashboard
+# Flizen Premium Flight Booking Dashboard
 
 A modern, dark-mode flight booking and management dashboard built with React and Tailwind CSS, inspired by Uber's design philosophy.
 
@@ -6,12 +6,15 @@ A modern, dark-mode flight booking and management dashboard built with React and
 
 Flizen is a premium flight booking platform featuring:
 - **Clean, modular React components** for maintainability and reusability
-- **Dark theme UI** with Material Design 3 colors
+- **Dark theme UI** with Material Design 3 colors following Uber's design language
 - **Responsive design** that works on desktop and tablet
 - **Tailwind CSS** for styling with custom theme configuration
-- **Interactive booking panel** with flight search functionality
-- **Route visualization** with animated SVG paths
-- **Flight cards** showing suggested routes with pricing and duration
+- **Interactive booking form** with searchable airport autocomplete
+- **Calendar date picker** with past date validation
+- **Passenger selector** with adults, children, and infants
+- **Cabin class selector** with 4 cabin options
+- **Dynamic route visualization** with curved SVG paths and airport markers
+- **Flight search** with backend integration
 - **Quick action tiles** for common tasks
 
 ## 📁 Project Structure
@@ -19,27 +22,35 @@ Flizen is a premium flight booking platform featuring:
 ```
 src/
 ├── components/
-│   ├── Navbar.jsx              # Navigation bar with logo and user menu
-│   ├── BookingPanel.jsx        # Main flight booking form
-│   ├── QuickActions.jsx        # Quick action tiles (Track, Trips, Status)
-│   ├── FlightStatusCheck.jsx   # Flight number lookup form
-│   ├── RouteMap.jsx            # Interactive route visualization with SVG
-│   ├── SuggestedRoutes.jsx     # Section displaying flight suggestions
-│   └── FlightCard.jsx          # Individual flight card component
+│   ├── Navbar.jsx                    # Navigation bar with logo
+│   ├── BookingPanel.jsx              # Main flight booking form
+│   ├── AirportAutocomplete.jsx       # Searchable airport selector
+│   ├── DatePickerField.jsx           # Custom calendar date picker
+│   ├── PassengerSelector.jsx         # Passenger count selector
+│   ├── CabinClassSelector.jsx        # Cabin class options
+│   ├── QuickActions.jsx              # Quick action tiles
+│   ├── FlightStatusCheck.jsx         # Flight number lookup
+│   ├── RouteMap.jsx                  # Dynamic route visualization
+│   ├── SuggestedRoutes.jsx           # Suggested flight routes
+│   └── FlightCard.jsx                # Individual flight card
+├── services/
+│   └── apiService.js                 # Backend API integration
 ├── data/
-│   └── suggestedRoutes.js      # Flight data (easily expandable)
-├── App.jsx                     # Main app component
-├── main.jsx                    # React entry point
-├── index.css                   # Global styles and Tailwind directives
-├── tailwind.config.js          # Tailwind configuration
-├── postcss.config.js           # PostCSS configuration
-└── vite.config.js              # Vite build configuration
+│   └── suggestedRoutes.js            # Sample flight data
+├── App.jsx                           # Main app component
+├── main.jsx                          # React entry point
+├── index.css                         # Global styles and Tailwind directives
+├── tailwind.config.js                # Tailwind configuration
+├── postcss.config.js                 # PostCSS configuration
+├── vite.config.js                    # Vite build configuration
+└── .env.example                      # Environment variables template
 ```
 
 ## 🛠️ Setup & Installation
 
 ### Prerequisites
-- Node.js 16+ and npm/yarn installed
+- Node.js 16+ and npm/yarn
+- FastAPI backend running (see [Backend Setup](#backend-setup))
 
 ### Installation Steps
 
@@ -53,11 +64,188 @@ src/
    npm install
    ```
 
-3. **Start the development server:**
+3. **Setup environment variables:**
+   ```bash
+   cp .env.example .env.local
+   ```
+   
+   Edit `.env.local` and set:
+   - `VITE_API_BASE_URL`: Backend API URL (default: `http://localhost:8000`)
+
+4. **Start the development server:**
    ```bash
    npm run dev
    ```
-   The app will automatically open at `http://localhost:3000`
+   The app will open at `http://localhost:5173`
+
+## 🎨 Key Components
+
+### AirportAutocomplete
+Searchable airport selector with real-time suggestions.
+- Searches by city, airport name, IATA code, ICAO code, or country
+- Shows airport name, city, country, and IATA code
+- Prevents selecting the same airport for departure and arrival
+- Styled to match dark dashboard theme
+
+### DatePickerField
+Custom calendar date picker integrated into the booking form.
+- Disables past dates
+- Return date validation (must be after departure)
+- Quick actions for "Today" and "Tomorrow"
+- Displays friendly date formats
+- Matches dark UI theme
+
+### PassengerSelector
+Manages passenger breakdown.
+- Adults (minimum 1)
+- Children (2-11 years)
+- Infants (under 2 years, max 1 per adult)
+- Plus/minus controls for easy adjustment
+
+### CabinClassSelector
+Selects cabin class for the flight.
+- Economy
+- Premium Economy
+- Business
+- First
+- Icons and descriptions for each class
+
+### RouteMap
+Dynamic map visualization showing flight routes.
+- Displays curved route line between airports
+- Shows airport markers with IATA codes and city names
+- Updates automatically when airports are selected
+- Uses simplified map projection for coordinates
+- Matches dark theme with gradient effects
+
+## 📡 Backend Integration
+
+The frontend communicates with the FastAPI backend for:
+- Airport search and autocomplete
+- Flight search based on criteria
+- Dynamic route data
+
+### API Endpoints Used
+
+**Airport Search:**
+```
+GET /airports/search?q=<query>
+```
+
+**Flight Search:**
+```
+POST /flights/search
+```
+
+**Health Check:**
+```
+GET /health
+```
+
+See [Backend README](../Flizen-Backend/README.md) for full API documentation.
+
+## 🚀 Running the Application
+
+### Development Mode
+```bash
+npm run dev
+```
+
+### Production Build
+```bash
+npm run build
+npm run preview
+```
+
+## 🔄 Backend Setup
+
+To run the full application, you also need to set up the backend:
+
+1. **Navigate to backend directory:**
+   ```bash
+   cd ../Flizen-Backend
+   ```
+
+2. **Follow backend setup instructions** from [Backend README](../Flizen-Backend/README.md)
+
+3. **Start the backend:**
+   ```bash
+   uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+   ```
+
+## 📋 Features
+
+### Booking Form
+- ✅ Airport autocomplete with real-time search
+- ✅ Calendar date picker with validation
+- ✅ Passenger selector (adults, children, infants)
+- ✅ Cabin class selector
+- ✅ Form validation with error messages
+- ✅ Search button with loading state
+
+### Route Map
+- ✅ Dynamic route visualization
+- ✅ Curved SVG paths between airports
+- ✅ Airport markers with labels
+- ✅ Real-time updates based on selection
+- ✅ Responsive design
+
+### UI/UX
+- ✅ Dark theme throughout
+- ✅ Material Design 3 colors
+- ✅ Plus Jakarta Sans typography
+- ✅ Smooth transitions and hover states
+- ✅ Material Symbols icons
+- ✅ Consistent spacing and layout
+
+## 🛠️ Development
+
+### Component Architecture
+Components are modular and reusable:
+- Each component handles its own state
+- Parent components pass data via props
+- Services handle API communication
+- Tailwind CSS for all styling
+
+### Adding New Components
+
+1. Create component file in `src/components/`
+2. Use existing Tailwind color and spacing tokens
+3. Import Material Symbols for icons
+4. Follow existing component patterns
+
+### Environment Variables
+
+- `VITE_API_BASE_URL`: Backend API URL (required for production)
+
+## 📚 Design System
+
+### Colors
+- Background: `#141313`
+- Surface: `#1F1F1F`
+- Primary: `#FFFFFF`
+- Secondary: `#0460e3`, `#b1c5ff`
+- Borders: `#2C2C2C`
+- Text: `#e5e2e1`
+
+### Typography
+- Headline: 24px (Plus Jakarta Sans, 600)
+- Body: 16px (Plus Jakarta Sans, 400)
+- Label: 12px-14px (Plus Jakarta Sans, 500-600)
+
+### Spacing
+- Container margin: 24px
+- Section gap: 40px
+- Element gap: 12px
+- Gutter: 16px
+
+## 📄 License
+
+MIT
+
+---
+
+For backend setup and API documentation, see [Flizen Backend README](../Flizen-Backend/README.md)
 
 ### Build for Production
 
