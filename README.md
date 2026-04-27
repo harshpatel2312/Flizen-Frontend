@@ -1,4 +1,4 @@
-# Flizen Premium Booking Dashboard
+# Flizen
 
 A modern, dark-mode flight booking and management dashboard built with React and Tailwind CSS, inspired by Uber's design philosophy.
 
