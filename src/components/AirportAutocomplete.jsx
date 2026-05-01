@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { searchAirports } from '../services/apiService';
+import '../styles/AirportAutocomplete.css';
 
 export default function AirportAutocomplete({
   label,
@@ -86,10 +87,10 @@ export default function AirportAutocomplete({
     <div ref={containerRef} className="relative">
       {/* Input Field */}
       <div
-        className={`flex items-center bg-[#1F1F1F] rounded-lg p-3 group focus-within:ring-1 transition-all ${
+        className={`flex items-center bg-[#1F1F1F] rounded-lg p-3 group focus-within:ring-2 transition-all ${
           error
-            ? 'ring-1 ring-error-container border border-error-container'
-            : 'focus-within:ring-secondary-container'
+            ? 'ring-2 ring-error-container border border-error-container'
+            : 'focus-within:ring-white'
         } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
       >
         <span className="material-symbols-outlined text-outline mr-3">{icon}</span>
@@ -123,7 +124,7 @@ export default function AirportAutocomplete({
 
       {/* Dropdown Suggestions */}
       {isOpen && suggestions.length > 0 && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-[#1F1F1F] rounded-lg border border-[#2C2C2C] shadow-lg z-50 max-h-80 overflow-y-auto">
+        <div className="airport-dropdown absolute top-full left-0 right-0 mt-2 bg-[#1F1F1F] rounded-lg border border-[#2C2C2C] shadow-lg z-50 max-h-80 overflow-y-auto">
           {suggestions.map((airport) => (
             <button
               key={airport.iata}
@@ -135,11 +136,11 @@ export default function AirportAutocomplete({
                   <div className="font-body-md text-primary group-hover:text-secondary truncate">
                     {airport.name}
                   </div>
-                  <div className="font-label-sm text-outline-variant text-sm">
+                  <div className="font-label-sm text-outline text-sm">
                     {airport.city}, {airport.country}
                   </div>
                 </div>
-                <div className="font-label-md text-secondary-container font-bold flex-shrink-0">
+                <div className="font-label-md text-white font-bold flex-shrink-0 group-hover:text-secondary transition-colors">
                   {airport.iata}
                 </div>
               </div>

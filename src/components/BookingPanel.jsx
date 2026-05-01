@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import AirportAutocomplete from './AirportAutocomplete';
 import DatePickerField from './DatePickerField';
 import PassengerSelector from './PassengerSelector';
 import CabinClassSelector from './CabinClassSelector';
-import { searchFlights } from '../services/apiService';
 
-export default function BookingPanel({ onRouteSelect = null }) {
+export default function BookingPanel() {
+  const navigate = useNavigate();
   const [fromAirport, setFromAirport] = useState(null);
   const [toAirport, setToAirport] = useState(null);
   const [departureDate, setDepartureDate] = useState('');
@@ -13,19 +14,25 @@ export default function BookingPanel({ onRouteSelect = null }) {
   const [passengers, setPassengers] = useState({ adults: 1, children: 0, infants: 0 });
   const [cabinClass, setCabinClass] = useState('Economy');
   const [isLoading, setIsLoading] = useState(false);
-  const [searchResults, setSearchResults] = useState(null);
   const [errors, setErrors] = useState({});
   const [apiError, setApiError] = useState('');
 
-  // Update parent when route selection changes
+  // Restore last search from sessionStorage on mount
   useEffect(() => {
-    if (onRouteSelect) {
-      onRouteSelect({
-        from: fromAirport,
-        to: toAirport,
-      });
+    try {
+      const saved = sessionStorage.getItem('flizen_last_search');
+      if (!saved) return;
+      const data = JSON.parse(saved);
+      if (data.fromAirport) setFromAirport(data.fromAirport);
+      if (data.toAirport) setToAirport(data.toAirport);
+      if (data.departureDate) setDepartureDate(data.departureDate);
+      if (data.returnDate) setReturnDate(data.returnDate);
+      if (data.passengers) setPassengers(data.passengers);
+      if (data.cabinClass) setCabinClass(data.cabinClass);
+    } catch {
+      // ignore malformed data
     }
-  }, [fromAirport, toAirport, onRouteSelect]);
+  }, []);
 
   // Validate form
   const validateForm = () => {
@@ -55,8 +62,8 @@ export default function BookingPanel({ onRouteSelect = null }) {
     return Object.keys(newErrors).length === 0;
   };
 
-  // Handle search
-  const handleSearch = async () => {
+  // Handle search - Navigate to flight listing page with search params
+  const handleSearch = () => {
     setApiError('');
 
     if (!validateForm()) {
@@ -66,25 +73,34 @@ export default function BookingPanel({ onRouteSelect = null }) {
     setIsLoading(true);
 
     try {
-      const searchParams = {
-        from_airport: fromAirport.iata,
-        to_airport: toAirport.iata,
-        departure_date: departureDate,
-        return_date: returnDate || null,
-        passengers,
-        cabin_class: cabinClass,
-      };
+      // Build query parameters
+      const params = new URLSearchParams({
+        from: fromAirport.iata,
+        to: toAirport.iata,
+        departureDate: departureDate,
+        adults: passengers.adults,
+        children: passengers.children,
+        infants: passengers.infants,
+        cabinClass: cabinClass,
+      });
 
-      const results = await searchFlights(searchParams);
-      setSearchResults(results);
-      
-      // TODO: Emit event or use context to pass results to parent
-      console.log('Search results:', results);
+      // Add return date if provided
+      if (returnDate) {
+        params.append('returnDate', returnDate);
+      }
+
+      // Persist search state so the form is pre-filled when navigating back
+      sessionStorage.setItem(
+        'flizen_last_search',
+        JSON.stringify({ fromAirport, toAirport, departureDate, returnDate, passengers, cabinClass })
+      );
+
+      // Navigate to flight listing page with search params
+      navigate(`/flights?${params.toString()}`);
     } catch (error) {
       setApiError(
-        error.message || 'Failed to search flights. Please try again.'
+        error.message || 'Failed to process search. Please try again.'
       );
-    } finally {
       setIsLoading(false);
     }
   };

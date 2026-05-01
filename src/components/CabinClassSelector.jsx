@@ -109,7 +109,7 @@ export default function CabinClassSelector({
               className={`
                 w-full p-3 rounded-lg mb-2 last:mb-0 text-left transition-colors
                 ${selected === cabin.name
-                  ? 'bg-secondary-container border border-secondary'
+                  ? 'bg-white border border-white'
                   : 'hover:bg-[#2C2C2C] border border-[#2C2C2C]'
                 }
               `}
@@ -117,20 +117,20 @@ export default function CabinClassSelector({
               <div className="flex items-start gap-3">
                 <span className={`
                   material-symbols-outlined mt-0.5 flex-shrink-0
-                  ${selected === cabin.name ? 'text-on-secondary-container' : 'text-secondary-container'}
+                  ${selected === cabin.name ? 'text-black' : 'text-white'}
                 `}>
                   {cabin.icon}
                 </span>
                 <div className="flex-1 min-w-0">
                   <div className={`
                     font-label-md
-                    ${selected === cabin.name ? 'text-on-secondary-container' : 'text-primary'}
+                    ${selected === cabin.name ? 'text-black' : 'text-primary'}
                   `}>
                     {cabin.name}
                   </div>
                   <div className={`
                     font-label-sm text-sm
-                    ${selected === cabin.name ? 'text-on-secondary-container opacity-80' : 'text-outline'}
+                    ${selected === cabin.name ? 'text-black opacity-80' : 'text-outline'}
                   `}>
                     {cabin.description}
                   </div>
