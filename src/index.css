@@ -49,6 +49,15 @@ body {
   direction: ltr;
 }
 
+/* Google Maps customization */
+.gm-style-mtc {
+  display: none;
+}
+
+.gm-fullscreen-control {
+  display: none;
+}
+
 /* Input styling */
 input {
   @apply outline-none;
@@ -61,4 +70,19 @@ input::placeholder {
 /* Button reset */
 button {
   @apply cursor-pointer;
+}
+
+/* Flight details panel — custom scrollbar */
+.flight-details-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+}
+.flight-details-scroll::-webkit-scrollbar { width: 6px; }
+.flight-details-scroll::-webkit-scrollbar-track { background: transparent; }
+.flight-details-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 3px;
+}
+.flight-details-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
 }

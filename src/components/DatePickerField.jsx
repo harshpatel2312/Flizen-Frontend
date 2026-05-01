@@ -11,47 +11,68 @@ export default function DatePickerField({
   error = null,
 }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [selectedDate, setSelectedDate] = useState(value ? new Date(value) : null);
+  
+  // Helper: Convert YYYY-MM-DD string to UTC Date object
+  const parseUTCDate = (dateStr) => {
+    if (!dateStr) return null;
+    const [year, month, day] = dateStr.split('-').map(Number);
+    return new Date(Date.UTC(year, month - 1, day));
+  };
+  
+  // Helper: Convert UTC Date to YYYY-MM-DD string
+  const dateToString = (date) => {
+    if (!date) return null;
+    const year = date.getUTCFullYear();
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(date.getUTCDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  
+  const [selectedDate, setSelectedDate] = useState(() => {
+    return value ? parseUTCDate(value) : null;
+  });
+  
+  const [currentMonth, setCurrentMonth] = useState(() => {
+    let date;
+    if (value) {
+      date = parseUTCDate(value);
+    } else {
+      date = new Date();
+      date = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+    }
+    return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1));
+  });
   const containerRef = useRef(null);
 
-  // Format date for display
+  const MONTH_NAMES_FULL = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const MONTH_NAMES_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+  // Format date for display (using UTC Date object)
   const formatDateDisplay = (date) => {
     if (!date) return '';
+    
+    const month = MONTH_NAMES_SHORT[date.getUTCMonth()];
+    const day = date.getUTCDate();
+    const year = date.getUTCFullYear();
+    
     const today = new Date();
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-
-    if (
-      date.toDateString() === today.toDateString()
-    ) {
-      return 'Today';
-    }
-    if (
-      date.toDateString() === tomorrow.toDateString()
-    ) {
-      return 'Tomorrow';
-    }
-
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: date.getFullYear() !== today.getFullYear() ? 'numeric' : undefined,
-    });
+    const currentYear = today.getUTCFullYear();
+    
+    return `${month} ${day}${year !== currentYear ? ', ' + year : ''}`;
   };
-
-  // Format date for API (YYYY-MM-DD)
+  
+  // Format date for API (YYYY-MM-DD) from UTC Date
   const formatDateAPI = (date) => {
-    return date.toISOString().split('T')[0];
+    return dateToString(date);
   };
 
-  // Get calendar days
+  // Get calendar days (using UTC)
   const getDaysInMonth = (date) => {
-    return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+    return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0)).getUTCDate();
   };
 
   const getFirstDayOfMonth = (date) => {
-    return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
+    return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1)).getUTCDay();
   };
 
   const generateCalendarDays = () => {
@@ -64,29 +85,30 @@ export default function DatePickerField({
       days.push(null);
     }
 
-    // Days of month
+    // Days of month as UTC Date objects
     for (let i = 1; i <= daysInMonth; i++) {
-      days.push(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), i));
+      days.push(new Date(Date.UTC(currentMonth.getUTCFullYear(), currentMonth.getUTCMonth(), i)));
     }
 
     return days;
   };
 
-  // Check if date is disabled
+  // Check if date is disabled (date is UTC Date object)
   const isDateDisabled = (date) => {
-    // Disable past dates
+    if (!date) return false;
+    
+    // Get today as UTC at midnight
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const todayUTC = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
 
-    if (date < today) {
+    if (date < todayUTC) {
       return true;
     }
 
-    // Disable dates after max date
+    // Check max date
     if (maxDate) {
-      const max = new Date(maxDate);
-      max.setHours(23, 59, 59, 999);
-      if (date > max) {
+      const maxDateObj = parseUTCDate(maxDate);
+      if (date > maxDateObj) {
         return true;
       }
     }
@@ -94,7 +116,7 @@ export default function DatePickerField({
     return false;
   };
 
-  // Handle date selection
+  // Handle date selection (receives UTC Date object)
   const handleSelectDate = (date) => {
     if (isDateDisabled(date)) return;
 
@@ -103,16 +125,16 @@ export default function DatePickerField({
     setIsOpen(false);
   };
 
-  // Handle month navigation
+  // Handle month navigation (using UTC)
   const handlePrevMonth = () => {
     setCurrentMonth(
-      new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1)
+      new Date(Date.UTC(currentMonth.getUTCFullYear(), currentMonth.getUTCMonth() - 1, 1))
     );
   };
 
   const handleNextMonth = () => {
     setCurrentMonth(
-      new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1)
+      new Date(Date.UTC(currentMonth.getUTCFullYear(), currentMonth.getUTCMonth() + 1, 1))
     );
   };
 
@@ -130,27 +152,27 @@ export default function DatePickerField({
 
   // Sync selected date when value prop changes
   useEffect(() => {
-    if (value) {
-      const date = new Date(value);
-      setSelectedDate(date);
-      setCurrentMonth(new Date(date.getFullYear(), date.getMonth(), 1));
+    const newSelectedDate = parseUTCDate(value);
+    // Only update if the value actually changed
+    if (newSelectedDate?.getTime?.() !== selectedDate?.getTime?.()) {
+      setSelectedDate(newSelectedDate);
+      if (newSelectedDate) {
+        setCurrentMonth(new Date(Date.UTC(newSelectedDate.getUTCFullYear(), newSelectedDate.getUTCMonth(), 1)));
+      }
     }
   }, [value]);
 
   const calendarDays = generateCalendarDays();
-  const monthYear = currentMonth.toLocaleDateString('en-US', {
-    month: 'long',
-    year: 'numeric',
-  });
+  const monthYear = `${MONTH_NAMES_FULL[currentMonth.getUTCMonth()]} ${currentMonth.getUTCFullYear()}`;
 
   return (
     <div ref={containerRef} className="relative">
       {/* Input Field */}
       <div
-        className={`flex items-center bg-[#1F1F1F] rounded-lg p-3 group focus-within:ring-1 transition-all cursor-pointer ${
+        className={`flex items-center bg-[#1F1F1F] rounded-lg p-3 group focus-within:ring-2 transition-all cursor-pointer ${
           error
-            ? 'ring-1 ring-error-container border border-error-container'
-            : 'focus-within:ring-secondary-container'
+            ? 'ring-2 ring-error-container border border-error-container'
+            : 'focus-within:ring-white'
         } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
         onClick={() => !disabled && setIsOpen(!isOpen)}
       >
@@ -215,14 +237,15 @@ export default function DatePickerField({
           <div className="grid grid-cols-7 gap-1">
             {calendarDays.map((date, i) => {
               const isDisabled = date && isDateDisabled(date);
+              
+              // Compare UTC dates
               const isSelected =
                 date &&
                 selectedDate &&
-                date.toDateString() === selectedDate.toDateString();
-              const isToday =
-                date &&
-                date.toDateString() === new Date().toDateString();
-
+                date.getUTCFullYear() === selectedDate.getUTCFullYear() &&
+                date.getUTCMonth() === selectedDate.getUTCMonth() &&
+                date.getUTCDate() === selectedDate.getUTCDate();
+              
               return (
                 <button
                   key={i}
@@ -230,41 +253,18 @@ export default function DatePickerField({
                   disabled={isDisabled}
                   className={`
                     h-8 rounded text-sm font-body-md transition-colors
-                    ${!date ? '' : ''}
                     ${isDisabled ? 'opacity-30 cursor-not-allowed' : ''}
-                    ${isSelected ? 'bg-secondary-container text-on-secondary-container font-bold' : ''}
-                    ${isToday && !isSelected ? 'ring-1 ring-secondary text-secondary' : ''}
-                    ${!isSelected && !isDisabled && !isToday ? 'text-primary hover:bg-[#2C2C2C]' : ''}
+                    ${isSelected ? 'bg-white text-black font-bold' : ''}
+                    ${!isSelected && !isDisabled ? 'text-primary hover:bg-[#2C2C2C]' : ''}
                   `}
                 >
-                  {date ? date.getDate() : ''}
+                  {date && date.getUTCDate()}
                 </button>
               );
             })}
           </div>
 
-          {/* Quick actions */}
-          <div className="border-t border-[#2C2C2C] mt-4 pt-4 flex gap-2">
-            <button
-              onClick={() => {
-                const today = new Date();
-                handleSelectDate(today);
-              }}
-              className="flex-1 py-2 px-3 text-sm text-primary hover:bg-[#2C2C2C] rounded transition-colors font-label-md"
-            >
-              Today
-            </button>
-            <button
-              onClick={() => {
-                const tomorrow = new Date();
-                tomorrow.setDate(tomorrow.getDate() + 1);
-                handleSelectDate(tomorrow);
-              }}
-              className="flex-1 py-2 px-3 text-sm text-primary hover:bg-[#2C2C2C] rounded transition-colors font-label-md"
-            >
-              Tomorrow
-            </button>
-          </div>
+
         </div>
       )}
     </div>
