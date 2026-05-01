@@ -36,7 +36,7 @@ export default function FlightHistory() {
         time: '10:45',
         airline: 'Hawaiian Airlines',
         flightNumber: 'HA789',
-        status: 'Confirmed',
+        status: 'Cancelled',
       },
     ];
 
@@ -96,54 +96,60 @@ export default function FlightHistory() {
 
   return (
     <section className="bg-[#121212] rounded-xl border border-[#2C2C2C] overflow-hidden">
-      <div className="p-4 border-b border-[#2C2C2C]">
+      <div className="px-4 py-3.5 border-b border-[#2C2C2C]">
         <h3 className="font-label-lg text-label-lg text-white flex items-center gap-2">
           <span className="material-symbols-outlined">airplane_ticket</span>
-          Your Booked Flights
+          Recent Trips
         </h3>
       </div>
       <div className="max-h-[450px] overflow-y-auto">
         {bookedFlights.map((flight) => (
           <div
             key={flight.id}
-            className="p-4 border-b border-[#2C2C2C] hover:bg-[#1F1F1F] transition-colors cursor-pointer"
+            className="px-4 py-3 border-b border-[#2C2C2C] hover:bg-[#1F1F1F] transition-colors cursor-pointer"
           >
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-4 flex-1">
-                <div className="text-center">
-                  <p className="font-heading-sm text-white text-lg">{flight.from}</p>
-                  <p className="text-xs text-[#888888]">{formatDate(flight.date)}</p>
-                </div>
+            <div className="flex items-center gap-3">
 
-                <div className="flex-1 flex items-center justify-center gap-2">
-                  <div className="h-px flex-1 bg-[#2C2C2C]" />
-                  <span className="material-symbols-outlined text-sm text-primary">
-                    flight_takeoff
-                  </span>
-                  <div className="h-px flex-1 bg-[#2C2C2C]" />
-                </div>
-
-                <div className="text-center">
-                  <p className="font-heading-sm text-white text-lg">{flight.to}</p>
-                  <p className="text-xs text-[#888888]">{flight.time}</p>
-                </div>
-              </div>
-
-              <span
-                className={`px-3 py-1 rounded-full text-xs font-label-sm ml-4 ${getStatusColor(
-                  flight.status
-                )}`}
-              >
-                {flight.status}
-              </span>
-            </div>
-
-            <div className="flex items-center justify-between text-xs">
-              <div>
-                <p className="text-[#888888]">
-                  {flight.airline} • {flight.flightNumber}
+              {/* Left: departure code + airline name */}
+              <div className="w-28 flex-shrink-0">
+                <p className="text-white text-xl font-semibold leading-tight tracking-wide">
+                  {flight.from}
+                </p>
+                <p className="text-[#AAAAAA] text-xs mt-1 leading-tight whitespace-nowrap">
+                  {flight.airline}
                 </p>
               </div>
+
+              {/* Center: route line with airplane icon — capped width so it doesn't stretch */}
+              <div className="flex-1 flex items-center min-w-0 max-w-[140px] mx-auto">
+                <div className="flex-1 h-px bg-[#2E2E2E]" />
+                <span
+                  className="material-symbols-outlined text-[14px] text-primary leading-none flex-shrink-0 mx-1.5"
+                  style={{ verticalAlign: 'middle' }}
+                >
+                  flight_takeoff
+                </span>
+                <div className="flex-1 h-px bg-[#2E2E2E]" />
+              </div>
+
+              {/* Right: destination code + separator + badge on top, date below */}
+              <div className="w-52 flex-shrink-0">
+                <div className="flex items-center gap-3">
+                  <p className="text-white text-xl font-semibold leading-tight tracking-wide">
+                    {flight.to}
+                  </p>
+                  <span className="text-[#3C3C3C] text-sm select-none leading-none px-0.5">|</span>
+                  <span
+                    className={`px-3 py-0.5 rounded-full text-xs font-medium whitespace-nowrap min-w-[80px] text-center ${getStatusColor(flight.status)}`}
+                  >
+                    {flight.status}
+                  </span>
+                </div>
+                <p className="text-[#AAAAAA] text-xs mt-1 leading-tight whitespace-nowrap">
+                  {formatDate(flight.date)}
+                </p>
+              </div>
+
             </div>
           </div>
         ))}

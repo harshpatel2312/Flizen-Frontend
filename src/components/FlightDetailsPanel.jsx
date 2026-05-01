@@ -122,7 +122,7 @@ export default function FlightDetailsPanel({ flight, searchCriteria, onContinue 
         {hasFareSection && (
           <div className="mb-6 pb-6 border-b border-[#2C2C2C] space-y-2">
             <p className="font-label-sm text-label-sm text-outline uppercase tracking-widest mb-3">
-              Fare
+              Fare Details
             </p>
 
             {flight.fareBrandName && (

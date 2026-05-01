@@ -115,7 +115,7 @@ export default function BookingPanel() {
 
   return (
     <section className="bg-[#121212] rounded-xl p-6 border border-[#2C2C2C] flex flex-col gap-container-margin">
-      <h2 className="font-headline-md text-headline-md text-primary">Book a Flight</h2>
+      <h2 className="font-headline-md text-headline-md text-primary">Where to next?</h2>
 
       {/* Airports Section */}
       <div className="flex flex-col gap-element-gap relative">
@@ -231,9 +231,6 @@ export default function BookingPanel() {
             </span>
           )}
           {isLoading ? 'Searching...' : 'Search Flights'}
-        </button>
-        <button className="bg-transparent border border-[#2C2C2C] text-primary font-label-md text-label-md py-4 rounded-lg w-full hover:bg-[#1F1F1F] transition-colors">
-          Track Flight
         </button>
       </div>
     </section>
