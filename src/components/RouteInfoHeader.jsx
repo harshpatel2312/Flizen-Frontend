@@ -18,7 +18,8 @@ export default function RouteInfoHeader({
       <p className="font-body-lg text-body-lg text-on-surface-variant mb-6">
         Choose the best flight for your trip
       </p>
-      <div className="bg-[#121212] border border-[#2C2C2C] rounded-xl p-4 flex flex-col md:flex-row items-center gap-4 text-on-surface">
+      <div className="flex justify-start">
+        <div className="inline-flex items-center gap-3 bg-[#121212] border border-[#2C2C2C] rounded-full px-5 py-3 text-on-surface flex-wrap">
         {/* Route Info */}
         <div className="flex items-center gap-2">
           <span className="font-label-md text-label-md text-primary">{fromAirport}</span>
@@ -27,18 +28,19 @@ export default function RouteInfoHeader({
         </div>
 
         {/* Divider */}
-        <div className="hidden md:block w-px h-4 bg-[#2C2C2C]"></div>
+        <span className="text-zinc-600 select-none">|</span>
 
         {/* Trip Details */}
-        <div className="flex items-center gap-4 text-outline font-label-md text-label-md flex-wrap md:flex-nowrap">
+        <div className="flex items-center gap-3 text-outline font-label-md text-label-md flex-wrap">
           <span>
             {formatDate(departDate)}
             {returnDate && ` - ${formatDate(returnDate)}`}
           </span>
-          <span>•</span>
+          <span className="text-zinc-600 select-none">|</span>
           <span>{passengers} Passenger{passengers > 1 ? 's' : ''}</span>
-          <span>•</span>
+          <span className="text-zinc-600 select-none">|</span>
           <span>{cabinClass}</span>
+        </div>
         </div>
       </div>
     </section>

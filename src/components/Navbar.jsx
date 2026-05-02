@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { signOut } from '../services/authService';
@@ -7,6 +7,19 @@ export default function Navbar() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef(null);
+
+  // Close when clicking anywhere outside the menu
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handleClickOutside = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [menuOpen]);
 
   async function handleSignOut() {
     setMenuOpen(false);
@@ -41,7 +54,7 @@ export default function Navbar() {
         </button>
 
         {/* User avatar + dropdown */}
-        <div className="relative">
+        <div className="relative" ref={menuRef}>
           <button
             aria-label="User menu"
             className="flex items-center gap-2 focus:outline-none"
@@ -62,28 +75,21 @@ export default function Navbar() {
           </button>
 
           {menuOpen && (
-            <>
-              {/* Overlay to close menu on outside click */}
-              <div
-                className="fixed inset-0 z-40"
-                onClick={() => setMenuOpen(false)}
-              />
-              <div className="absolute right-0 mt-2 w-52 bg-[#1a1a1a] border border-zinc-800 rounded-xl shadow-2xl z-50 overflow-hidden">
-                <div className="px-4 py-3 border-b border-zinc-800">
-                  <p className="text-white text-sm font-medium truncate">{displayName}</p>
-                  {user?.email && (
-                    <p className="text-zinc-500 text-xs truncate mt-0.5">{user.email}</p>
-                  )}
-                </div>
-                <button
-                  onClick={handleSignOut}
-                  className="w-full flex items-center gap-2 px-4 py-3 text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors duration-150"
-                >
-                  <span className="material-symbols-outlined text-base">logout</span>
-                  Sign out
-                </button>
+            <div className="absolute right-0 mt-2 w-52 bg-[#1a1a1a] border border-zinc-800 rounded-xl shadow-2xl z-50 overflow-hidden">
+              <div className="px-4 py-3 border-b border-zinc-800">
+                <p className="text-white text-sm font-medium truncate">{displayName}</p>
+                {user?.email && (
+                  <p className="text-zinc-500 text-xs truncate mt-0.5">{user.email}</p>
+                )}
               </div>
-            </>
+              <button
+                onClick={handleSignOut}
+                className="w-full flex items-center gap-2 px-4 py-3 text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors duration-150"
+              >
+                <span className="material-symbols-outlined text-base">logout</span>
+                Sign out
+              </button>
+            </div>
           )}
         </div>
       </div>

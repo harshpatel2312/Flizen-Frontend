@@ -5,6 +5,7 @@ import { AuthProvider } from './context/AuthContext.jsx'
 import ProtectedRoute from './components/ProtectedRoute.jsx'
 import App from './App.jsx'
 import FlightListingPage from './pages/FlightListingPage.jsx'
+import PassengerDetailsPage from './pages/PassengerDetailsPage.jsx'
 import LoginPage from './pages/LoginPage.jsx'
 import SignUpPage from './pages/SignUpPage.jsx'
 import './index.css'
@@ -33,6 +34,14 @@ ReactDOM.createRoot(document.getElementById('root')).render(
             element={
               <ProtectedRoute>
                 <FlightListingPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/passengers"
+            element={
+              <ProtectedRoute>
+                <PassengerDetailsPage />
               </ProtectedRoute>
             }
           />
