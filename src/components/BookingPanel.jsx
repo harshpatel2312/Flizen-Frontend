@@ -223,7 +223,7 @@ export default function BookingPanel() {
         <button
           onClick={handleSearch}
           disabled={isLoading}
-          className="bg-primary text-on-primary font-label-md text-label-md font-bold py-4 rounded-lg w-full hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          className="bg-primary text-on-primary font-label-md text-label-md font-bold py-4 rounded-full w-full hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
           {isLoading && (
             <span className="material-symbols-outlined animate-spin">

@@ -176,7 +176,7 @@ export default function FlightDetailsPanel({ flight, searchCriteria, onContinue 
         {/* ── CTA ── */}
         <button
           onClick={() => onContinue?.(flight)}
-          className="w-full bg-primary text-on-primary font-label-md text-label-md font-bold py-3 rounded-lg hover:opacity-90 transition-opacity"
+          className="w-full bg-primary text-on-primary font-label-md text-label-md font-bold py-3 rounded-full hover:opacity-90 transition-opacity"
         >
           Continue
         </button>

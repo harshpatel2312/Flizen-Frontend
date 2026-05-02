@@ -60,7 +60,7 @@ export default function BookingSummaryPanel({ flight, onContinueBooking }) {
         {/* CTA Button */}
         <button
           onClick={() => onContinueBooking?.(flight)}
-          className="w-full bg-primary text-on-primary font-label-md text-label-md py-3 rounded-lg hover:bg-primary-container transition-colors"
+          className="w-full bg-primary text-on-primary font-label-md text-label-md py-3 rounded-full hover:bg-primary-container transition-colors"
         >
           Continue Booking
         </button>

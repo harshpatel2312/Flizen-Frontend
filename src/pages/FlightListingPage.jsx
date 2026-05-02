@@ -1,16 +1,18 @@
 import { useState, useEffect } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import RouteInfoHeader from '../components/RouteInfoHeader';
 import FlightFilters from '../components/FlightFilters';
 import FlightListCard from '../components/FlightListCard';
 import FlightDetailsPanel from '../components/FlightDetailsPanel';
 import { searchFlights, transformFlightData } from '../services/flightService';
+import { getFlightCache, setFlightCache, clearFlightCache } from '../services/flightCache';
 import { sortFlights } from '../utils/flightUtils';
 import { parseSearchParams } from '../utils/searchParamUtils';
 
 export default function FlightListingPage() {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [selectedFlight, setSelectedFlight] = useState(null);
   const [sortBy, setSortBy] = useState('best');
   const [flights, setFlights] = useState([]);
@@ -28,6 +30,15 @@ export default function FlightListingPage() {
   useEffect(() => {
     if (!searchCriteria) return;
 
+    const cacheKey = searchParams.toString();
+    const cached = getFlightCache(cacheKey);
+
+    if (cached) {
+      setFlights(sortFlights(cached, sortBy));
+      setLoading(false);
+      return;
+    }
+
     const fetchFlights = async () => {
       setLoading(true);
       setError(null);
@@ -35,9 +46,10 @@ export default function FlightListingPage() {
 
       try {
         const response = await searchFlights(searchCriteria);
-        
+
         if (response.flights && response.flights.length > 0) {
           const transformed = response.flights.map(transformFlightData);
+          setFlightCache(cacheKey, transformed);
           setFlights(sortFlights(transformed, 'best'));
         } else {
           setFlights([]);
@@ -59,12 +71,14 @@ export default function FlightListingPage() {
     // Preserve the selected flight — no need to clear it
   };
 
-  const handleFilterClick = () => {
-    // TODO: Implement filter drawer/modal
-  };
-
   const handleContinueBooking = (flight) => {
-    // TODO: Navigate to checkout/payment page with flight details
+    navigate('/passengers', {
+      state: {
+        flight,
+        searchCriteria,
+        backUrl: `/flights?${searchParams.toString()}`,
+      },
+    });
   };
 
   if (!searchCriteria) {
@@ -87,6 +101,7 @@ export default function FlightListingPage() {
         {/* Back Link */}
         <Link
           to="/"
+          onClick={clearFlightCache}
           className="inline-flex items-center gap-2 text-primary hover:text-primary-container transition-colors mb-6"
         >
           <span className="material-symbols-outlined">arrow_back</span>
@@ -128,7 +143,7 @@ export default function FlightListingPage() {
         {/* Filters & Results */}
         {!loading && !error && (
           <>
-            <FlightFilters onSortChange={handleSortChange} onFilterClick={handleFilterClick} />
+            <FlightFilters onSortChange={handleSortChange} />
 
             {/* Main Content: Flight List & Booking Summary */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-gutter items-start">
