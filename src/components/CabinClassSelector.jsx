@@ -81,7 +81,7 @@ export default function CabinClassSelector({
       <button
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
-        className={`w-full flex items-center bg-[#1F1F1F] rounded-lg p-3 cursor-pointer hover:bg-surface-bright transition-colors ${
+        className={`w-full flex items-center bg-[#1F1F1F] rounded-full p-3 cursor-pointer hover:bg-surface-bright transition-colors ${
           disabled ? 'opacity-50 cursor-not-allowed' : ''
         }`}
       >
@@ -101,13 +101,13 @@ export default function CabinClassSelector({
 
       {/* Dropdown Panel */}
       {isOpen && !disabled && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-[#1F1F1F] rounded-lg border border-[#2C2C2C] shadow-lg z-50 p-2 w-full sm:w-80">
+        <div className="absolute top-full left-0 right-0 mt-2 bg-[#1F1F1F] rounded-lg border border-[#2C2C2C] shadow-lg z-50 p-2 w-full sm:w-72">
           {CABIN_CLASSES.map((cabin) => (
             <button
               key={cabin.id}
               onClick={() => handleSelect(cabin)}
               className={`
-                w-full p-3 rounded-lg mb-2 last:mb-0 text-left transition-colors
+                w-full p-2 rounded-full mb-1.5 last:mb-0 text-left transition-colors
                 ${selected === cabin.name
                   ? 'bg-white border border-white'
                   : 'hover:bg-[#2C2C2C] border border-[#2C2C2C]'

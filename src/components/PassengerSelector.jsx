@@ -70,7 +70,7 @@ export default function PassengerSelector({
       <button
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
-        className={`w-full flex items-center bg-[#1F1F1F] rounded-lg p-3 cursor-pointer hover:bg-surface-bright transition-colors ${
+        className={`w-full flex items-center bg-[#1F1F1F] rounded-full p-3 cursor-pointer hover:bg-surface-bright transition-colors ${
           disabled ? 'opacity-50 cursor-not-allowed' : ''
         }`}
       >
@@ -90,9 +90,9 @@ export default function PassengerSelector({
 
       {/* Dropdown Panel */}
       {isOpen && !disabled && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-[#1F1F1F] rounded-lg border border-[#2C2C2C] shadow-lg z-50 p-4 w-full sm:w-80">
+        <div className="absolute top-full left-0 right-0 mt-2 bg-[#1F1F1F] rounded-lg border border-[#2C2C2C] shadow-lg z-50 p-3 w-full sm:w-72">
           {/* Adults */}
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-3">
             <div>
               <div className="text-primary font-label-md">Adults</div>
               <div className="text-outline font-label-sm text-sm">
@@ -103,16 +103,16 @@ export default function PassengerSelector({
               <button
                 onClick={() => updatePassengers('adults', -1)}
                 disabled={passengers.adults <= 1}
-                className="w-8 h-8 flex items-center justify-center rounded border border-[#2C2C2C] hover:bg-[#2C2C2C] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                className="w-7 h-7 flex items-center justify-center rounded-full border border-[#2C2C2C] hover:bg-[#2C2C2C] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               >
                 <span className="material-symbols-outlined text-sm">remove</span>
               </button>
-              <span className="w-8 text-center text-primary font-body-md font-bold">
+              <span className="w-7 text-center text-primary font-body-md font-bold">
                 {passengers.adults}
               </span>
               <button
                 onClick={() => updatePassengers('adults', 1)}
-                className="w-8 h-8 flex items-center justify-center rounded border border-[#2C2C2C] hover:bg-[#2C2C2C] transition-colors"
+                className="w-7 h-7 flex items-center justify-center rounded-full border border-[#2C2C2C] hover:bg-[#2C2C2C] transition-colors"
               >
                 <span className="material-symbols-outlined text-sm">add</span>
               </button>
@@ -120,7 +120,7 @@ export default function PassengerSelector({
           </div>
 
           {/* Children */}
-          <div className="flex items-center justify-between mb-4 pb-4 border-b border-[#2C2C2C]">
+          <div className="flex items-center justify-between mb-3 pb-3 border-b border-[#2C2C2C]">
             <div>
               <div className="text-primary font-label-md">Children</div>
               <div className="text-outline font-label-sm text-sm">
@@ -131,16 +131,16 @@ export default function PassengerSelector({
               <button
                 onClick={() => updatePassengers('children', -1)}
                 disabled={passengers.children <= 0}
-                className="w-8 h-8 flex items-center justify-center rounded border border-[#2C2C2C] hover:bg-[#2C2C2C] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                className="w-7 h-7 flex items-center justify-center rounded-full border border-[#2C2C2C] hover:bg-[#2C2C2C] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               >
                 <span className="material-symbols-outlined text-sm">remove</span>
               </button>
-              <span className="w-8 text-center text-primary font-body-md font-bold">
+              <span className="w-7 text-center text-primary font-body-md font-bold">
                 {passengers.children}
               </span>
               <button
                 onClick={() => updatePassengers('children', 1)}
-                className="w-8 h-8 flex items-center justify-center rounded border border-[#2C2C2C] hover:bg-[#2C2C2C] transition-colors"
+                className="w-7 h-7 flex items-center justify-center rounded-full border border-[#2C2C2C] hover:bg-[#2C2C2C] transition-colors"
               >
                 <span className="material-symbols-outlined text-sm">add</span>
               </button>
@@ -159,17 +159,17 @@ export default function PassengerSelector({
               <button
                 onClick={() => updatePassengers('infants', -1)}
                 disabled={passengers.infants <= 0}
-                className="w-8 h-8 flex items-center justify-center rounded border border-[#2C2C2C] hover:bg-[#2C2C2C] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                className="w-7 h-7 flex items-center justify-center rounded-full border border-[#2C2C2C] hover:bg-[#2C2C2C] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               >
                 <span className="material-symbols-outlined text-sm">remove</span>
               </button>
-              <span className="w-8 text-center text-primary font-body-md font-bold">
+              <span className="w-7 text-center text-primary font-body-md font-bold">
                 {passengers.infants}
               </span>
               <button
                 onClick={() => updatePassengers('infants', 1)}
                 disabled={passengers.infants >= passengers.adults}
-                className="w-8 h-8 flex items-center justify-center rounded border border-[#2C2C2C] hover:bg-[#2C2C2C] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                className="w-7 h-7 flex items-center justify-center rounded-full border border-[#2C2C2C] hover:bg-[#2C2C2C] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               >
                 <span className="material-symbols-outlined text-sm">add</span>
               </button>
@@ -177,7 +177,7 @@ export default function PassengerSelector({
           </div>
 
           {/* Info */}
-          <div className="mt-4 p-3 bg-[#0e0e0e] rounded text-primary font-label-sm text-sm">
+          <div className="mt-3 p-2 bg-[#0e0e0e] rounded text-primary font-label-sm text-sm">
             Each infant must have an accompanying adult.
           </div>
         </div>

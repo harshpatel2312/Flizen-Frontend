@@ -1,18 +1,25 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Navigate, Link } from 'react-router-dom';
 import AuthButton from '../components/auth/AuthButton';
 import GoogleIcon from '../components/auth/GoogleIcon';
 import { signInWithGoogle } from '../services/authService';
+import { useAuth } from '../context/AuthContext';
 
 export default function SignUpPage() {
   const navigate = useNavigate();
+  const { user, loading } = useAuth();
   const [error, setError] = useState('');
+
+  // Already signed in — go straight to dashboard
+  if (!loading && user) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   async function handleGoogleSignIn() {
     setError('');
     try {
       await signInWithGoogle();
-      navigate('/dashboard');
+      navigate('/dashboard', { replace: true });
     } catch (err) {
       setError(err.message || 'Sign-up failed. Please try again.');
     }

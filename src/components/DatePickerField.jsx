@@ -169,7 +169,7 @@ export default function DatePickerField({
     <div ref={containerRef} className="relative">
       {/* Input Field */}
       <div
-        className={`flex items-center bg-[#1F1F1F] rounded-lg p-3 group focus-within:ring-2 transition-all cursor-pointer ${
+        className={`flex items-center bg-[#1F1F1F] rounded-full p-3 group focus-within:ring-2 transition-all cursor-pointer ${
           error
             ? 'ring-2 ring-error-container border border-error-container'
             : 'focus-within:ring-white'
@@ -197,12 +197,12 @@ export default function DatePickerField({
 
       {/* Calendar Dropdown */}
       {isOpen && !disabled && (
-        <div className="absolute top-full left-0 mt-2 bg-[#1F1F1F] rounded-lg border border-[#2C2C2C] shadow-lg z-50 p-4 w-72">
+        <div className="absolute top-full left-0 mt-2 bg-[#1F1F1F] rounded-lg border border-[#2C2C2C] shadow-lg z-50 p-3 w-64">
           {/* Month/Year Header */}
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-3">
             <button
               onClick={handlePrevMonth}
-              className="p-2 hover:bg-[#2C2C2C] rounded transition-colors"
+              className="p-2 hover:bg-[#2C2C2C] rounded-full transition-colors"
             >
               <span className="material-symbols-outlined text-outline">
                 chevron_left
@@ -213,7 +213,7 @@ export default function DatePickerField({
             </div>
             <button
               onClick={handleNextMonth}
-              className="p-2 hover:bg-[#2C2C2C] rounded transition-colors"
+              className="p-2 hover:bg-[#2C2C2C] rounded-full transition-colors"
             >
               <span className="material-symbols-outlined text-outline">
                 chevron_right
@@ -222,11 +222,11 @@ export default function DatePickerField({
           </div>
 
           {/* Day of week header */}
-          <div className="grid grid-cols-7 gap-1 mb-2">
+          <div className="grid grid-cols-7 gap-0.5 mb-1">
             {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
               <div
                 key={day}
-                className="text-center text-outline-variant font-label-sm text-label-sm h-8"
+                className="text-center text-outline-variant font-label-sm text-label-sm h-6 text-xs"
               >
                 {day}
               </div>
@@ -234,7 +234,7 @@ export default function DatePickerField({
           </div>
 
           {/* Calendar Grid */}
-          <div className="grid grid-cols-7 gap-1">
+          <div className="grid grid-cols-7 gap-0.5">
             {calendarDays.map((date, i) => {
               const isDisabled = date && isDateDisabled(date);
               
@@ -252,7 +252,7 @@ export default function DatePickerField({
                   onClick={() => date && handleSelectDate(date)}
                   disabled={isDisabled}
                   className={`
-                    h-8 rounded text-sm font-body-md transition-colors
+                    h-7 rounded text-xs font-body-md transition-colors
                     ${isDisabled ? 'opacity-30 cursor-not-allowed' : ''}
                     ${isSelected ? 'bg-white text-black font-bold' : ''}
                     ${!isSelected && !isDisabled ? 'text-primary hover:bg-[#2C2C2C]' : ''}

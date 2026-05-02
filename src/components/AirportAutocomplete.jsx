@@ -87,7 +87,7 @@ export default function AirportAutocomplete({
     <div ref={containerRef} className="relative">
       {/* Input Field */}
       <div
-        className={`flex items-center bg-[#1F1F1F] rounded-lg p-3 group focus-within:ring-2 transition-all ${
+        className={`flex items-center bg-[#1F1F1F] rounded-full p-3 group focus-within:ring-2 transition-all ${
           error
             ? 'ring-2 ring-error-container border border-error-container'
             : 'focus-within:ring-white'

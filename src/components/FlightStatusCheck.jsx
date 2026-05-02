@@ -11,7 +11,7 @@ export default function FlightStatusCheck() {
             type="text"
           />
         </div>
-        <button className="bg-[#1F1F1F] border border-[#2C2C2C] text-primary rounded-lg px-4 hover:bg-surface-bright transition-colors flex items-center justify-center">
+        <button className="bg-[#1F1F1F] border border-[#2C2C2C] text-primary rounded-full px-4 hover:bg-surface-bright transition-colors flex items-center justify-center">
           <span className="material-symbols-outlined">search</span>
         </button>
       </div>
