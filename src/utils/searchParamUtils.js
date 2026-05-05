@@ -20,5 +20,6 @@ export function parseSearchParams(searchParams) {
       infants: parseInt(searchParams.get('infants') || '0'),
     },
     cabin_class: searchParams.get('cabinClass') || 'Economy',
+    trip_type: searchParams.get('tripType') || 'one-way',
   };
 }

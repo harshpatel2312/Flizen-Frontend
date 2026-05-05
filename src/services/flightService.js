@@ -30,10 +30,7 @@ export async function searchFlights(params) {
     currency,
   });
 
-  const response = await fetch(`${API_BASE_URL}/api/flights/search?${queryParams}`, {
-    method: 'GET',
-    headers: { 'Content-Type': 'application/json' },
-  });
+  const response = await fetch(`${API_BASE_URL}/api/flights/search?${queryParams}`);
 
   if (!response.ok) {
     let detail = `Flight search failed: ${response.statusText}`;
@@ -56,7 +53,7 @@ export async function searchFlights(params) {
 export function transformFlightData(duffelFlight) {
   return {
     // Identity
-    id: duffelFlight.id || `unknown-${Math.random()}`,
+    id: duffelFlight.id || '',
     // Airline
     airline: duffelFlight.airline || 'Unknown Airline',
     airlineLogo: duffelFlight.airline_logo || null,

@@ -49,8 +49,8 @@ export default function Navbar() {
       </div>
 
       <div className="flex items-center gap-gutter">
-        <button className="text-white hover:text-white transition-colors duration-200 active:opacity-80">
-          <span className="material-symbols-outlined">notifications</span>
+        <button className="flex items-center justify-center text-zinc-500 hover:text-white transition-colors duration-200">
+          <span className="material-symbols-outlined text-[22px] leading-none">notifications</span>
         </button>
 
         {/* User avatar + dropdown */}
@@ -75,20 +75,43 @@ export default function Navbar() {
           </button>
 
           {menuOpen && (
-            <div className="absolute right-0 mt-2 w-52 bg-[#1a1a1a] border border-zinc-800 rounded-xl shadow-2xl z-50 overflow-hidden">
+            <div className="absolute right-0 mt-2 w-56 bg-[#1a1a1a] border border-zinc-800 rounded-xl shadow-2xl z-50 overflow-hidden">
+              {/* User info */}
               <div className="px-4 py-3 border-b border-zinc-800">
                 <p className="text-white text-sm font-medium truncate">{displayName}</p>
                 {user?.email && (
                   <p className="text-zinc-500 text-xs truncate mt-0.5">{user.email}</p>
                 )}
               </div>
-              <button
-                onClick={handleSignOut}
-                className="w-full flex items-center gap-2 px-4 py-3 text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors duration-150"
-              >
-                <span className="material-symbols-outlined text-base">logout</span>
-                Sign out
-              </button>
+
+              {/* Nav actions */}
+              <div className="py-1 border-b border-zinc-800">
+                {[
+                  { icon: 'person', label: 'Profile', path: '/profile' },
+                  { icon: 'credit_card', label: 'Payment Methods', path: null },
+                  { icon: 'help', label: 'Help', path: null },
+                ].map(({ icon, label, path }) => (
+                  <button
+                    key={label}
+                    onClick={() => { setMenuOpen(false); if (path) navigate(path); }}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors duration-150"
+                  >
+                    <span className="material-symbols-outlined text-base">{icon}</span>
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Sign out */}
+              <div className="py-1">
+                <button
+                  onClick={handleSignOut}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors duration-150"
+                >
+                  <span className="material-symbols-outlined text-base">logout</span>
+                  Sign out
+                </button>
+              </div>
             </div>
           )}
         </div>
