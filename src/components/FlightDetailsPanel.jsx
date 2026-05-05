@@ -33,6 +33,10 @@ export default function FlightDetailsPanel({ flight, searchCriteria, onContinue 
     flight.baggages?.length > 0 ||
     hasConditions;
 
+  const hasExtraInfo =
+    flight.totalEmissionsKg != null ||
+    flight.passportRequired != null;
+
   return (
     <div className="lg:sticky lg:top-24">
       <div className="bg-[#1F1F1F] border border-[#2C2C2C] rounded-xl p-6 shadow-[0_0_32px_rgba(0,0,0,0.4)] max-h-[calc(100vh-7rem)] overflow-y-auto flight-details-scroll">
@@ -135,9 +139,11 @@ export default function FlightDetailsPanel({ flight, searchCriteria, onContinue 
               <Row
                 key={i}
                 label={bag.type === 'carry_on' ? 'Carry-on' : 'Checked bag'}
-                value={`${bag.quantity} bag${bag.quantity !== 1 ? 's' : ''}${
-                  bag.max_weight_kg ? ` · ${bag.max_weight_kg}kg` : ''
-                }`}
+                value={
+                  bag.max_weight_kg
+                    ? `${bag.quantity} x ${bag.max_weight_kg} kg`
+                    : `${bag.quantity} bag${bag.quantity !== 1 ? 's' : ''}`
+                }
               />
             ))}
             {refundCond?.allowed != null && (
@@ -160,6 +166,28 @@ export default function FlightDetailsPanel({ flight, searchCriteria, onContinue 
                     : 'No'
                 }
                 accent={changeCond.allowed ? 'green' : 'red'}
+              />
+            )}
+          </div>
+        )}
+
+        {/* ── Extra info (CO2, passport) ── */}
+        {hasExtraInfo && (
+          <div className="mb-6 pb-6 border-b border-[#2C2C2C] space-y-2">
+            <p className="font-label-sm text-label-sm text-outline uppercase tracking-widest mb-3">
+              Additional Info
+            </p>
+            {flight.totalEmissionsKg != null && (
+              <Row
+                label="CO₂ emissions"
+                value={`~${parseFloat(flight.totalEmissionsKg).toLocaleString('en-US')} kg`}
+              />
+            )}
+            {flight.passportRequired != null && (
+              <Row
+                label="Passport at booking"
+                value={flight.passportRequired ? 'Yes' : 'No'}
+                accent={flight.passportRequired ? 'amber' : 'green'}
               />
             )}
           </div>
@@ -192,6 +220,8 @@ function Row({ label, value, accent }) {
       ? 'text-green-400'
       : accent === 'red'
       ? 'text-red-400'
+      : accent === 'amber'
+      ? 'text-amber-400'
       : 'text-outline';
   return (
     <div className="flex justify-between font-label-sm text-label-sm">

@@ -26,12 +26,6 @@ export default function FlightHistory() {
               Your next journey is just a few taps away.
             </p>
           </div>
-          <button
-            onClick={() => document.querySelector('[data-booking-panel]')?.scrollIntoView({ behavior: 'smooth' })}
-            className="mt-2 px-5 py-2 rounded-full bg-primary text-black text-sm font-medium hover:opacity-90 transition-opacity"
-          >
-            Start exploring
-          </button>
         </div>
       </section>
     );
