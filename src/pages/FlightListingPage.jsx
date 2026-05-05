@@ -9,7 +9,7 @@ import FlightDetailsPanel from '../components/FlightDetailsPanel';
 import { searchFlights, transformFlightData } from '../services/flightService';
 import { getFlightCache, setFlightCache, clearFlightCache } from '../services/flightCache';
 import { getAirport } from '../services/apiService';
-import { sortFlights } from '../utils/flightUtils';
+import { sortFlights, formatDuration, formatPrice, getStopsLabel } from '../utils/flightUtils';
 import { parseSearchParams } from '../utils/searchParamUtils';
 
 export default function FlightListingPage() {
@@ -25,6 +25,11 @@ export default function FlightListingPage() {
   const [searchCriteria, setSearchCriteria] = useState(null);
   const [fromCity, setFromCity] = useState(null);
   const [toCity, setToCity] = useState(null);
+  const [phase, setPhase] = useState('outbound'); // 'outbound' | 'inbound'
+  const [selectedOutbound, setSelectedOutbound] = useState(null);
+  const [inboundFlights, setInboundFlights] = useState([]);
+  const [inboundLoading, setInboundLoading] = useState(false);
+  const [inboundError, setInboundError] = useState(null);
 
   // Parse search params from URL
   useEffect(() => {
@@ -46,6 +51,13 @@ export default function FlightListingPage() {
   // Fetch flights when search criteria changes
   useEffect(() => {
     if (!searchCriteria) return;
+
+    // Reset round-trip state on new search
+    setPhase('outbound');
+    setSelectedOutbound(null);
+    setInboundFlights([]);
+    setInboundError(null);
+    setSelectedFlight(null);
 
     const cacheKey = searchParams.toString();
     const cached = getFlightCache(cacheKey);
@@ -82,23 +94,81 @@ export default function FlightListingPage() {
     fetchFlights();
   }, [searchCriteria]);
 
+  const isRoundTrip = searchCriteria?.trip_type === 'round-trip';
+
+  const fetchInboundFlights = async () => {
+    if (!searchCriteria) return;
+    const cacheKey = `inbound_${searchParams.toString()}`;
+    const cached = getFlightCache(cacheKey);
+    if (cached) {
+      setInboundFlights(cached);
+      return;
+    }
+    setInboundLoading(true);
+    setInboundError(null);
+    const inboundCriteria = {
+      ...searchCriteria,
+      from_airport: searchCriteria.to_airport,
+      to_airport: searchCriteria.from_airport,
+      departure_date: searchCriteria.return_date,
+      return_date: null,
+    };
+    try {
+      const response = await searchFlights(inboundCriteria);
+      if (response.flights && response.flights.length > 0) {
+        const transformed = response.flights.map(transformFlightData);
+        setFlightCache(cacheKey, transformed);
+        setInboundFlights(transformed);
+      } else {
+        setInboundFlights([]);
+      }
+    } catch (err) {
+      setInboundError(err.message || 'Could not load return flights.');
+      setInboundFlights([]);
+    } finally {
+      setInboundLoading(false);
+    }
+  };
+
   const handleSortChange = (sortId) => {
     setSortBy(sortId);
   };
 
+  const handleSelectOutbound = (flight) => {
+    setSelectedOutbound(flight);
+    setPhase('inbound');
+    setSelectedFlight(null);
+    setActiveFilters(DEFAULT_FILTERS);
+    setSortBy('best');
+    fetchInboundFlights();
+  };
+
+  const handleChangeOutbound = () => {
+    setPhase('outbound');
+    setSelectedOutbound(null);
+    setSelectedFlight(null);
+    setActiveFilters(DEFAULT_FILTERS);
+    setSortBy('best');
+  };
+
   const handleContinueBooking = (flight) => {
+    if (isRoundTrip && phase === 'outbound') {
+      handleSelectOutbound(flight);
+      return;
+    }
     navigate('/passengers', {
       state: {
-        flight,
+        flight: isRoundTrip ? selectedOutbound : flight,
+        inboundFlight: isRoundTrip ? flight : undefined,
         searchCriteria,
         backUrl: `/flights?${searchParams.toString()}`,
       },
     });
   };
 
-  // Derive displayed flights from allFlights, activeFilters, and sortBy
+  // Derive displayed flights from allFlights/inboundFlights, activeFilters, and sortBy
   const filteredFlights = useMemo(() => {
-    let result = allFlights;
+    let result = isRoundTrip && phase === 'inbound' ? inboundFlights : allFlights;
     const { stops, priceMax, airlines, timeSlots, duration } = activeFilters;
     if (stops.length > 0)
       result = result.filter((f) =>
@@ -117,7 +187,7 @@ export default function FlightListingPage() {
     else if (duration === '6-12') result = result.filter((f) => f.durationMinutes >= 360 && f.durationMinutes < 720);
     else if (duration === '12-plus') result = result.filter((f) => f.durationMinutes >= 720);
     return result;
-  }, [allFlights, activeFilters]);
+  }, [allFlights, inboundFlights, activeFilters, isRoundTrip, phase]);
 
   const displayedFlights = sortFlights(filteredFlights, sortBy);
 
@@ -128,6 +198,9 @@ export default function FlightListingPage() {
     activeFilters.timeSlots.length > 0,
     activeFilters.duration != null,
   ].filter(Boolean).length;
+
+  const activeLoading = isRoundTrip && phase === 'inbound' ? inboundLoading : loading;
+  const activeError = isRoundTrip && phase === 'inbound' ? inboundError : error;
 
   if (!searchCriteria) {
     return (
@@ -158,18 +231,28 @@ export default function FlightListingPage() {
 
         {/* Header with Route Info */}
         <RouteInfoHeader
-          fromAirport={searchCriteria.from_airport}
-          toAirport={searchCriteria.to_airport}
-          fromCity={fromCity}
-          toCity={toCity}
-          departDate={searchCriteria.departure_date}
-          returnDate={searchCriteria.return_date}
+          heading={
+            isRoundTrip
+              ? (phase === 'outbound' ? 'Available Outbound Flights' : 'Available Inbound Flights')
+              : 'Available Flights'
+          }
+          subheading={
+            isRoundTrip
+              ? (phase === 'outbound' ? 'Choose your departure flight' : 'Choose your return flight')
+              : 'Choose the best flight for your trip'
+          }
+          fromAirport={isRoundTrip && phase === 'inbound' ? searchCriteria.to_airport : searchCriteria.from_airport}
+          toAirport={isRoundTrip && phase === 'inbound' ? searchCriteria.from_airport : searchCriteria.to_airport}
+          fromCity={isRoundTrip && phase === 'inbound' ? toCity : fromCity}
+          toCity={isRoundTrip && phase === 'inbound' ? fromCity : toCity}
+          departDate={isRoundTrip && phase === 'inbound' ? searchCriteria.return_date : searchCriteria.departure_date}
+          returnDate={null}
           passengers={searchCriteria.passengers.adults + searchCriteria.passengers.children}
           cabinClass={searchCriteria.cabin_class}
         />
 
         {/* Error Message */}
-        {error && (
+        {activeError && (
           <div className="mb-6 p-4 bg-error/20 border border-error rounded-xl text-error">
             <div className="flex items-center gap-2">
               <span className="material-symbols-outlined">error</span>
@@ -179,7 +262,7 @@ export default function FlightListingPage() {
         )}
 
         {/* Loading State */}
-        {loading && (
+        {activeLoading && (
           <div className="flex items-center justify-center h-96">
             <div className="text-center">
               <div className="animate-spin mb-4">
@@ -191,7 +274,7 @@ export default function FlightListingPage() {
         )}
 
         {/* Filters & Results */}
-        {!loading && !error && (
+        {!activeLoading && !activeError && (
           <>
             <FlightFilters
               onSortChange={handleSortChange}
@@ -203,6 +286,47 @@ export default function FlightListingPage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-gutter items-start">
               {/* Left Column: Flight List */}
               <div className="lg:col-span-2 flex flex-col gap-4">
+                {/* Selected Departure Flight summary — shown in round-trip inbound phase */}
+                {isRoundTrip && phase === 'inbound' && selectedOutbound && (
+                  <div className="bg-[#1A1A1A] border border-[#2C2C2C] rounded-xl px-6 py-5">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-2">
+                        <span className="material-symbols-outlined text-sm text-primary">flight_takeoff</span>
+                        <p className="font-label-sm text-label-sm text-outline uppercase tracking-widest">Departure Flight</p>
+                      </div>
+                      <button
+                        onClick={handleChangeOutbound}
+                        className="font-label-sm text-label-sm text-primary hover:opacity-70 transition-opacity"
+                      >
+                        Change
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        {selectedOutbound.airlineLogo ? (
+                          <img
+                            src={selectedOutbound.airlineLogo}
+                            alt={selectedOutbound.airline}
+                            className="w-8 h-8 rounded-full object-contain bg-[#1F1F1F]"
+                          />
+                        ) : (
+                          <div className="w-8 h-8 rounded-full bg-surface-container-high flex items-center justify-center">
+                            <span className="material-symbols-outlined text-primary text-sm">flight</span>
+                          </div>
+                        )}
+                        <div>
+                          <p className="font-label-md text-label-md text-primary">{selectedOutbound.airline}</p>
+                          <p className="font-label-sm text-label-sm text-outline mt-0.5">
+                            {selectedOutbound.departureTime} → {selectedOutbound.arrivalTime}
+                            {' · '}{formatDuration(selectedOutbound.duration)}
+                            {' · '}{getStopsLabel(selectedOutbound.stops)}
+                          </p>
+                        </div>
+                      </div>
+                      <p className="font-label-md text-label-md text-primary">{formatPrice(selectedOutbound.price, selectedOutbound.currency)}</p>
+                    </div>
+                  </div>
+                )}
                 {displayedFlights.length > 0 ? (
                   displayedFlights.map((flight) => (
                     <FlightListCard
@@ -238,6 +362,7 @@ export default function FlightListingPage() {
                 flight={selectedFlight}
                 searchCriteria={searchCriteria}
                 onContinue={handleContinueBooking}
+                ctaLabel={isRoundTrip && phase === 'outbound' ? 'Select Flight' : 'Continue Booking'}
               />
             </div>
           </>
@@ -247,7 +372,7 @@ export default function FlightListingPage() {
       <FlightFilterPanel
         isOpen={isFilterOpen}
         onClose={() => setIsFilterOpen(false)}
-        allFlights={allFlights}
+        allFlights={isRoundTrip && phase === 'inbound' ? inboundFlights : allFlights}
         filters={activeFilters}
         onApply={(f) => { setActiveFilters(f); setSelectedFlight(null); }}
       />

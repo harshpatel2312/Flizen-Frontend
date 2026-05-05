@@ -11,6 +11,7 @@ import Navbar from '../components/Navbar';
 import FlightDetailsPanel from '../components/FlightDetailsPanel';
 import DatePickerDOB from '../components/DatePickerDOB';
 import { useAuth } from '../context/AuthContext';
+import { fetchProfile } from '../services/profileService';
 import '../styles/AirportAutocomplete.css';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -101,6 +102,7 @@ function CapsuleDropdown({ label, error, options, placeholder, value, onChange }
 // ─────────────────────────────────────────────────────────────────────────────
 
 function PassportNumberInput({ value, onChange, onBlur, error }) {
+  const [show, setShow] = useState(false);
   const handleChange = (e) => {
     const clean = e.target.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 9);
     onChange(clean);
@@ -115,6 +117,7 @@ function PassportNumberInput({ value, onChange, onBlur, error }) {
         <input
           className="flex-1 bg-transparent h-full px-5 text-primary font-body-md focus:outline-none placeholder:text-[#8e9192] tracking-widest"
           placeholder="e.g. A12345678"
+          type={show ? 'text' : 'password'}
           value={value}
           onChange={handleChange}
           onBlur={onBlur}
@@ -123,6 +126,16 @@ function PassportNumberInput({ value, onChange, onBlur, error }) {
           autoCapitalize="off"
           spellCheck={false}
         />
+        <button
+          type="button"
+          onClick={() => setShow((s) => !s)}
+          className="pr-4 text-outline hover:text-primary transition-colors"
+          tabIndex={-1}
+        >
+          <span className="material-symbols-outlined text-[20px] leading-none">
+            {show ? 'visibility_off' : 'visibility'}
+          </span>
+        </button>
       </div>
       {error && <p className="text-error-container font-label-sm text-label-sm px-2">{error}</p>}
     </div>
@@ -180,9 +193,9 @@ function PhoneInput({ value, onChange, onBlur, error }) {
 // Dropdown option lists
 // ─────────────────────────────────────────────────────────────────────────────
 const GENDER_OPTIONS = [
-  { value: 'female', label: 'Female' },
-  { value: 'male', label: 'Male' },
-  { value: 'unspecified', label: 'Unspecified' },
+  { value: 'male',    label: 'Male' },
+  { value: 'female',  label: 'Female' },
+  { value: 'unknown', label: 'Prefer not to say' },
 ];
 
 const COUNTRIES = [
@@ -295,7 +308,7 @@ export default function PassengerDetailsPage() {
   const navigate   = useNavigate();
   const { user }   = useAuth();
 
-  const { flight, searchCriteria, backUrl } = location.state || {};
+  const { flight, inboundFlight, searchCriteria, backUrl } = location.state || {};
 
   // Build ordered traveler list from search criteria counts
   const travelers = (() => {
@@ -326,6 +339,37 @@ export default function PassengerDetailsPage() {
   const [contact, setContact] = useState({ email: user?.email || '', phone: '' });
   const [errors, setErrors] = useState([]);
   const [contactErrors, setContactErrors] = useState({});
+
+  // ── pre-populate primary passenger from saved profile ──────────────────────
+  useEffect(() => {
+    if (!user) return;
+    fetchProfile(user)
+      .then((profile) => {
+        if (!profile) return;
+        const { personal = {}, contact: pc = {}, passport: pp = {} } = profile;
+        setPassengers((prev) => {
+          const next = [...prev];
+          next[0] = {
+            ...next[0],
+            ...(personal.firstName   && { firstName:               personal.firstName }),
+            ...(personal.lastName    && { lastName:                personal.lastName }),
+            ...(personal.dob         && { dob:                     personal.dob }),
+            ...(personal.gender      && { gender:                  personal.gender }),
+            ...(personal.nationality && { nationality:             personal.nationality }),
+            ...(pp.number            && { passport:               pp.number }),
+            ...(pp.country           && { passportIssuingCountry: pp.country }),
+            ...(pp.expiry            && { passportExpiry:         pp.expiry }),
+          };
+          return next;
+        });
+        setContact((prev) => ({
+          ...prev,
+          ...(pc.email && { email: pc.email }),
+          ...(pc.phone && { phone: pc.phone }),
+        }));
+      })
+      .catch(() => {}); // silently ignore — user may not have a profile yet
+  }, [user]);
 
   const updatePassenger = (idx, field, val) => {
     setPassengers((prev) => {
@@ -389,7 +433,7 @@ export default function PassengerDetailsPage() {
       if (!p.lastName.trim())  e.lastName  = 'Required';
       if (!p.dob)              e.dob       = 'Required';
       if (!p.gender)           e.gender    = 'Required';
-      if (flight.passportRequired && travelers[idx]?.type !== 'infant') {
+      if ((flight.passportRequired || inboundFlight?.passportRequired) && travelers[idx]?.type !== 'infant') {
         if (!p.passport.trim()) {
           e.passport = 'Required';
         } else if (!/^[A-Z0-9]{6,9}$/.test(p.passport)) {
@@ -486,7 +530,7 @@ export default function PassengerDetailsPage() {
                 errors={errors[idx] || {}}
                 onChange={(field, val) => updatePassenger(idx, field, val)}
                 onBlur={(field, val) => validatePassengerField(idx, field, val)}
-                passportRequired={!!flight.passportRequired}
+                passportRequired={!!(flight.passportRequired || inboundFlight?.passportRequired)}
               />
             ))}
 
@@ -523,6 +567,7 @@ export default function PassengerDetailsPage() {
           <div className="lg:col-span-4">
             <FlightDetailsPanel
               flight={flight}
+              inboundFlight={inboundFlight}
               searchCriteria={searchCriteria}
               onContinue={handleContinue}
             />

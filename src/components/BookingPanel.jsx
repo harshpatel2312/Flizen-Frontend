@@ -16,6 +16,7 @@ export default function BookingPanel() {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [apiError, setApiError] = useState('');
+  const [tripType, setTripType] = useState('one-way');
 
   // Restore last search from sessionStorage on mount
   useEffect(() => {
@@ -29,6 +30,7 @@ export default function BookingPanel() {
       if (data.returnDate) setReturnDate(data.returnDate);
       if (data.passengers) setPassengers(data.passengers);
       if (data.cabinClass) setCabinClass(data.cabinClass);
+      if (data.tripType) setTripType(data.tripType);
     } catch {
       // ignore malformed data
     }
@@ -52,6 +54,10 @@ export default function BookingPanel() {
 
     if (!departureDate) {
       newErrors.departure = 'Departure date is required';
+    }
+
+    if (tripType === 'round-trip' && !returnDate) {
+      newErrors.return = 'Return date is required for round trips';
     }
 
     if (returnDate && departureDate && new Date(returnDate) <= new Date(departureDate)) {
@@ -88,11 +94,12 @@ export default function BookingPanel() {
       if (returnDate) {
         params.append('returnDate', returnDate);
       }
+      params.append('tripType', tripType);
 
       // Persist search state so the form is pre-filled when navigating back
       sessionStorage.setItem(
         'flizen_last_search',
-        JSON.stringify({ fromAirport, toAirport, departureDate, returnDate, passengers, cabinClass })
+        JSON.stringify({ fromAirport, toAirport, departureDate, returnDate, passengers, cabinClass, tripType })
       );
 
       // Navigate to flight listing page with search params
@@ -114,8 +121,32 @@ export default function BookingPanel() {
   };
 
   return (
-    <section className="bg-[#121212] rounded-xl p-6 border border-[#2C2C2C] flex flex-col gap-container-margin">
+    <section className="bg-[#121212] rounded-xl p-5 border border-[#2C2C2C] flex flex-col gap-4">
       <h2 className="font-headline-md text-headline-md text-primary">Where to next?</h2>
+
+      {/* Trip Type Toggle */}
+      <div className="flex gap-1 bg-[#1A1A1A] border border-[#2C2C2C] rounded-full p-1 w-fit">
+        {[
+          { id: 'one-way', label: 'One Way' },
+          { id: 'round-trip', label: 'Round Trip' },
+        ].map(({ id, label }) => (
+          <button
+            key={id}
+            onClick={() => {
+              setTripType(id);
+              if (id === 'one-way') setReturnDate('');
+              setErrors({});
+            }}
+            className={`px-4 py-1.5 rounded-full font-label-md text-label-md transition-all ${
+              tripType === id
+                ? 'bg-primary text-on-primary font-bold'
+                : 'text-on-surface-variant hover:text-primary'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
 
       {/* Airports Section */}
       <div className="flex flex-col gap-element-gap relative">
@@ -138,9 +169,9 @@ export default function BookingPanel() {
         {/* Swap Button */}
         <button
           onClick={handleSwap}
-          className="absolute right-4 top-[calc(50%-16px)] bg-[#121212] border border-[#2C2C2C] rounded-full p-2 z-10 hover:bg-[#1F1F1F] hover:border-secondary transition-all"
+          className="absolute right-4 top-[calc(50%-16px)] bg-[#121212] border border-[#2C2C2C] rounded-full p-2 z-10 hover:bg-[#1F1F1F] hover:border-white hover:ring-2 hover:ring-white focus:outline-none transition-all group"
         >
-          <span className="material-symbols-outlined text-primary text-[18px]">
+          <span className="material-symbols-outlined text-outline group-hover:text-primary text-[18px] transition-colors">
             swap_vert
           </span>
         </button>
@@ -164,7 +195,7 @@ export default function BookingPanel() {
       </div>
 
       {/* Dates Section */}
-      <div className="grid grid-cols-2 gap-element-gap">
+      <div className={`grid gap-element-gap ${tripType === 'round-trip' ? 'grid-cols-2' : 'grid-cols-1'}`}>
         <DatePickerField
           label="Departure"
           icon="calendar_today"
@@ -176,21 +207,23 @@ export default function BookingPanel() {
           error={errors.departure}
         />
 
-        <DatePickerField
-          label="Return"
-          icon="event_repeat"
-          value={returnDate}
-          onChange={(date) => {
-            setReturnDate(date);
-            setErrors({ ...errors, return: undefined });
-          }}
-          minDate={departureDate ? new Date(departureDate) : new Date()}
-          error={errors.return}
-        />
+        {tripType === 'round-trip' && (
+          <DatePickerField
+            label="Return"
+            icon="event_repeat"
+            value={returnDate}
+            onChange={(date) => {
+              setReturnDate(date);
+              setErrors({ ...errors, return: undefined });
+            }}
+            minDate={departureDate ? new Date(departureDate) : new Date()}
+            error={errors.return}
+          />
+        )}
       </div>
 
       {/* Passengers & Class Section */}
-      <div className="grid grid-cols-2 gap-element-gap border-b border-[#2C2C2C] pb-container-margin">
+      <div className="grid grid-cols-2 gap-element-gap border-b border-[#2C2C2C] pb-4">
         <PassengerSelector
           value={passengers}
           onChange={setPassengers}
@@ -223,7 +256,7 @@ export default function BookingPanel() {
         <button
           onClick={handleSearch}
           disabled={isLoading}
-          className="bg-primary text-on-primary font-label-md text-label-md font-bold py-4 rounded-full w-full hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          className="bg-primary text-on-primary font-label-md text-label-md font-bold py-3 rounded-full w-full hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
           {isLoading && (
             <span className="material-symbols-outlined animate-spin">
