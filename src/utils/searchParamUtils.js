@@ -4,51 +4,6 @@
  */
 
 /**
- * Get default search params
- * @returns {URLSearchParams} - Default search parameters
- */
-export function getDefaultSearchParams() {
-  const today = new Date();
-  const departDate = new Date(today);
-  departDate.setDate(departDate.getDate() + 7); // 7 days from now
-
-  const params = new URLSearchParams({
-    from: 'JFK',
-    to: 'LHR',
-    departureDate: departDate.toISOString().split('T')[0],
-    adults: '1',
-    children: '0',
-    infants: '0',
-    cabinClass: 'Economy',
-  });
-
-  return params;
-}
-
-/**
- * Build search params from search criteria
- * @param {Object} criteria - Search criteria object
- * @returns {URLSearchParams} - URL search parameters
- */
-export function buildSearchParams(criteria) {
-  const params = new URLSearchParams({
-    from: criteria.from || 'JFK',
-    to: criteria.to || 'LHR',
-    departureDate: criteria.departureDate,
-    adults: criteria.adults || '1',
-    children: criteria.children || '0',
-    infants: criteria.infants || '0',
-    cabinClass: criteria.cabinClass || 'Economy',
-  });
-
-  if (criteria.returnDate) {
-    params.append('returnDate', criteria.returnDate);
-  }
-
-  return params;
-}
-
-/**
  * Parse search params from URLSearchParams
  * @param {URLSearchParams} searchParams - URL search params
  * @returns {Object} - Parsed search criteria

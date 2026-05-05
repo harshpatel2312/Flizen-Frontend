@@ -1,6 +1,8 @@
 export default function RouteInfoHeader({
   fromAirport,
   toAirport,
+  fromCity,
+  toCity,
   departDate,
   returnDate,
   passengers,
@@ -12,6 +14,9 @@ export default function RouteInfoHeader({
     return new Date(date).toLocaleDateString('en-US', options);
   };
 
+  const formatAirport = (iata, city) =>
+    city ? `${city} (${iata})` : iata;
+
   return (
     <section className="mb-section-gap">
       <h1 className="font-headline-lg text-headline-lg text-primary mb-2">Available Flights</h1>
@@ -22,9 +27,9 @@ export default function RouteInfoHeader({
         <div className="inline-flex items-center gap-3 bg-[#121212] border border-[#2C2C2C] rounded-full px-5 py-3 text-on-surface flex-wrap">
         {/* Route Info */}
         <div className="flex items-center gap-2">
-          <span className="font-label-md text-label-md text-primary">{fromAirport}</span>
+          <span className="font-label-md text-label-md text-primary">{formatAirport(fromAirport, fromCity)}</span>
           <span className="material-symbols-outlined text-outline">arrow_right_alt</span>
-          <span className="font-label-md text-label-md text-primary">{toAirport}</span>
+          <span className="font-label-md text-label-md text-primary">{formatAirport(toAirport, toCity)}</span>
         </div>
 
         {/* Divider */}

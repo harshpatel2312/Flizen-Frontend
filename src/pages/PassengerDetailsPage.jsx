@@ -97,6 +97,86 @@ function CapsuleDropdown({ label, error, options, placeholder, value, onChange }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Specialised input components
+// ─────────────────────────────────────────────────────────────────────────────
+
+function PassportNumberInput({ value, onChange, onBlur, error }) {
+  const handleChange = (e) => {
+    const clean = e.target.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 9);
+    onChange(clean);
+  };
+  return (
+    <div className="flex flex-col gap-2">
+      <FieldLabel>Passport Number</FieldLabel>
+      <div
+        className={`flex items-center bg-[#1F1F1F] rounded-full h-12 focus-within:ring-2 transition-all
+          ${error ? 'ring-2 ring-error-container' : 'focus-within:ring-white'}`}
+      >
+        <input
+          className="flex-1 bg-transparent h-full px-5 text-primary font-body-md focus:outline-none placeholder:text-[#8e9192] tracking-widest"
+          placeholder="e.g. A12345678"
+          value={value}
+          onChange={handleChange}
+          onBlur={onBlur}
+          maxLength={9}
+          autoComplete="off"
+          autoCapitalize="off"
+          spellCheck={false}
+        />
+      </div>
+      {error && <p className="text-error-container font-label-sm text-label-sm px-2">{error}</p>}
+    </div>
+  );
+}
+
+function PassportExpiryInput({ value, onChange, onBlur, error }) {
+  const handleChange = (e) => {
+    const digits = e.target.value.replace(/\D/g, '').slice(0, 6);
+    const formatted = digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits;
+    onChange(formatted);
+  };
+  return (
+    <div className="flex flex-col gap-2">
+      <FieldLabel>Passport Expiry</FieldLabel>
+      <div
+        className={`flex items-center bg-[#1F1F1F] rounded-full h-12 focus-within:ring-2 transition-all
+          ${error ? 'ring-2 ring-error-container' : 'focus-within:ring-white'}`}
+      >
+        <input
+          className="flex-1 bg-transparent h-full px-5 text-primary font-body-md focus:outline-none placeholder:text-[#8e9192]"
+          placeholder="MM/YYYY"
+          value={value}
+          onChange={handleChange}
+          onBlur={onBlur}
+          maxLength={7}
+          inputMode="numeric"
+        />
+      </div>
+      {error && <p className="text-error-container font-label-sm text-label-sm px-2">{error}</p>}
+    </div>
+  );
+}
+
+function PhoneInput({ value, onChange, onBlur, error }) {
+  const handleChange = (e) => {
+    const filtered = e.target.value.replace(/[^0-9+\-\s().]/g, '').slice(0, 20);
+    onChange(filtered);
+  };
+  return (
+    <CapsuleInput
+      label="Phone Number"
+      type="tel"
+      placeholder="+1 (555) 000-0000"
+      value={value}
+      onChange={handleChange}
+      onBlur={onBlur}
+      error={error}
+      inputMode="tel"
+    />
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Dropdown option lists
 // ─────────────────────────────────────────────────────────────────────────────
 const GENDER_OPTIONS = [
@@ -128,7 +208,7 @@ const TYPE_SUBTITLE = {
   infant: 'Infants are under 2 years old at time of travel.',
 };
 
-function TravelerForm({ globalNum, type, data, errors, onChange }) {
+function TravelerForm({ globalNum, type, data, errors, onChange, onBlur, passportRequired }) {
   return (
     <section className="bg-[#121212] border border-[#2C2C2C] rounded-xl p-6 lg:p-8 flex flex-col gap-6">
       <div className="border-b border-[#2C2C2C] pb-4">
@@ -178,13 +258,29 @@ function TravelerForm({ globalNum, type, data, errors, onChange }) {
           value={data.nationality}
           onChange={(val) => onChange('nationality', val)}
         />
-        {type !== 'infant' && (
-          <CapsuleInput
-            label="Passport Number"
-            placeholder="Optional for domestic"
-            value={data.passport}
-            onChange={(e) => onChange('passport', e.target.value)}
-          />
+        {type !== 'infant' && passportRequired && (
+          <>
+            <PassportNumberInput
+              value={data.passport}
+              onChange={(val) => onChange('passport', val)}
+              onBlur={() => onBlur('passport', data.passport)}
+              error={errors.passport}
+            />
+            <CapsuleDropdown
+              label="Issuing Country"
+              placeholder="Select country"
+              options={COUNTRIES}
+              value={data.passportIssuingCountry}
+              onChange={(val) => onChange('passportIssuingCountry', val)}
+              error={errors.passportIssuingCountry}
+            />
+            <PassportExpiryInput
+              value={data.passportExpiry}
+              onChange={(val) => onChange('passportExpiry', val)}
+              onBlur={() => onBlur('passportExpiry', data.passportExpiry)}
+              error={errors.passportExpiry}
+            />
+          </>
         )}
       </div>
     </section>
@@ -214,12 +310,14 @@ export default function PassengerDetailsPage() {
   })();
 
   const blankPassenger = (isFirst) => ({
-    firstName:   isFirst ? (user?.displayName?.split(' ')[0] || '') : '',
-    lastName:    isFirst ? (user?.displayName?.split(' ').slice(1).join(' ') || '') : '',
-    dob:         '',
-    gender:      '',
-    nationality: '',
-    passport:    '',
+    firstName:              isFirst ? (user?.displayName?.split(' ')[0] || '') : '',
+    lastName:               isFirst ? (user?.displayName?.split(' ').slice(1).join(' ') || '') : '',
+    dob:                    '',
+    gender:                 '',
+    nationality:            '',
+    passport:               '',
+    passportIssuingCountry: '',
+    passportExpiry:         '',
   });
 
   const [passengers, setPassengers] = useState(() =>
@@ -247,17 +345,79 @@ export default function PassengerDetailsPage() {
     if (contactErrors[field]) setContactErrors((prev) => ({ ...prev, [field]: undefined }));
   };
 
+  const validatePassengerField = (idx, field, val) => {
+    let error;
+    if (field === 'passport') {
+      if (!val.trim()) error = 'Required';
+      else if (!/^[A-Z0-9]{6,9}$/.test(val)) error = '6–9 uppercase letters & digits';
+    } else if (field === 'passportExpiry') {
+      if (!val.trim()) error = 'Required';
+      else if (!/^(0[1-9]|1[0-2])\/\d{4}$/.test(val)) error = 'Use MM/YYYY format';
+      else {
+        const [mm, yyyy] = val.split('/');
+        const expiry = new Date(parseInt(yyyy), parseInt(mm) - 1, 1);
+        const now = new Date(); now.setDate(1); now.setHours(0, 0, 0, 0);
+        if (expiry < now) error = 'Passport has expired';
+      }
+    }
+    if (error !== undefined) {
+      setErrors((prev) => {
+        const next = [...prev];
+        next[idx] = { ...(next[idx] || {}), [field]: error };
+        return next;
+      });
+    }
+  };
+
+  const validateContactField = (field, val) => {
+    let error;
+    if (field === 'email') {
+      if (!val.trim()) error = 'Required';
+      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(val.trim())) error = 'Invalid email address';
+    } else if (field === 'phone') {
+      if (val.trim() && !/^\+?[\d\s\-().]{7,20}$/.test(val.trim())) error = 'Invalid phone number';
+    }
+    if (error !== undefined) {
+      setContactErrors((prev) => ({ ...prev, [field]: error }));
+    }
+  };
+
   const validate = () => {
-    const pErrs = passengers.map((p) => {
+    const pErrs = passengers.map((p, idx) => {
       const e = {};
       if (!p.firstName.trim()) e.firstName = 'Required';
       if (!p.lastName.trim())  e.lastName  = 'Required';
       if (!p.dob)              e.dob       = 'Required';
       if (!p.gender)           e.gender    = 'Required';
+      if (flight.passportRequired && travelers[idx]?.type !== 'infant') {
+        if (!p.passport.trim()) {
+          e.passport = 'Required';
+        } else if (!/^[A-Z0-9]{6,9}$/.test(p.passport)) {
+          e.passport = '6–9 uppercase letters & digits';
+        }
+        if (!p.passportIssuingCountry) e.passportIssuingCountry = 'Required';
+        if (!p.passportExpiry.trim()) {
+          e.passportExpiry = 'Required';
+        } else if (!/^(0[1-9]|1[0-2])\/\d{4}$/.test(p.passportExpiry)) {
+          e.passportExpiry = 'Use MM/YYYY format';
+        } else {
+          const [mm, yyyy] = p.passportExpiry.split('/');
+          const expiry = new Date(parseInt(yyyy), parseInt(mm) - 1, 1);
+          const now = new Date(); now.setDate(1); now.setHours(0, 0, 0, 0);
+          if (expiry < now) e.passportExpiry = 'Passport has expired';
+        }
+      }
       return e;
     });
     const cErrs = {};
-    if (!contact.email.trim()) cErrs.email = 'Required';
+    if (!contact.email.trim()) {
+      cErrs.email = 'Required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(contact.email.trim())) {
+      cErrs.email = 'Invalid email address';
+    }
+    if (contact.phone.trim() && !/^\+?[\d\s\-().]{7,20}$/.test(contact.phone.trim())) {
+      cErrs.phone = 'Invalid phone number';
+    }
     setErrors(pErrs);
     setContactErrors(cErrs);
     return pErrs.every((e) => Object.keys(e).length === 0) && Object.keys(cErrs).length === 0;
@@ -325,6 +485,8 @@ export default function PassengerDetailsPage() {
                 data={passengers[idx]}
                 errors={errors[idx] || {}}
                 onChange={(field, val) => updatePassenger(idx, field, val)}
+                onBlur={(field, val) => validatePassengerField(idx, field, val)}
+                passportRequired={!!flight.passportRequired}
               />
             ))}
 
@@ -343,14 +505,14 @@ export default function PassengerDetailsPage() {
                   placeholder="jane.doe@example.com"
                   value={contact.email}
                   onChange={(e) => updateContact('email', e.target.value)}
+                  onBlur={() => validateContactField('email', contact.email)}
                   error={contactErrors.email}
                 />
-                <CapsuleInput
-                  label="Phone Number"
-                  type="tel"
-                  placeholder="+1 (555) 000-0000"
+                <PhoneInput
                   value={contact.phone}
-                  onChange={(e) => updateContact('phone', e.target.value)}
+                  onChange={(val) => updateContact('phone', val)}
+                  onBlur={() => validateContactField('phone', contact.phone)}
+                  error={contactErrors.phone}
                 />
               </div>
             </section>

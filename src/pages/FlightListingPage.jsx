@@ -1,12 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import RouteInfoHeader from '../components/RouteInfoHeader';
 import FlightFilters from '../components/FlightFilters';
+import FlightFilterPanel, { DEFAULT_FILTERS, TIME_SLOTS } from '../components/FlightFilterPanel';
 import FlightListCard from '../components/FlightListCard';
 import FlightDetailsPanel from '../components/FlightDetailsPanel';
 import { searchFlights, transformFlightData } from '../services/flightService';
 import { getFlightCache, setFlightCache, clearFlightCache } from '../services/flightCache';
+import { getAirport } from '../services/apiService';
 import { sortFlights } from '../utils/flightUtils';
 import { parseSearchParams } from '../utils/searchParamUtils';
 
@@ -15,15 +17,30 @@ export default function FlightListingPage() {
   const navigate = useNavigate();
   const [selectedFlight, setSelectedFlight] = useState(null);
   const [sortBy, setSortBy] = useState('best');
-  const [flights, setFlights] = useState([]);
+  const [allFlights, setAllFlights] = useState([]);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [activeFilters, setActiveFilters] = useState(DEFAULT_FILTERS);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchCriteria, setSearchCriteria] = useState(null);
+  const [fromCity, setFromCity] = useState(null);
+  const [toCity, setToCity] = useState(null);
 
   // Parse search params from URL
   useEffect(() => {
     const params = parseSearchParams(searchParams);
     setSearchCriteria(params);
+
+    // Fetch city names for display (non-blocking)
+    const fetchCities = async () => {
+      const [from, to] = await Promise.allSettled([
+        getAirport(params.from_airport),
+        getAirport(params.to_airport),
+      ]);
+      setFromCity(from.status === 'fulfilled' ? from.value?.city ?? null : null);
+      setToCity(to.status === 'fulfilled' ? to.value?.city ?? null : null);
+    };
+    fetchCities();
   }, [searchParams]);
 
   // Fetch flights when search criteria changes
@@ -34,7 +51,7 @@ export default function FlightListingPage() {
     const cached = getFlightCache(cacheKey);
 
     if (cached) {
-      setFlights(sortFlights(cached, sortBy));
+      setAllFlights(cached);
       setLoading(false);
       return;
     }
@@ -50,13 +67,13 @@ export default function FlightListingPage() {
         if (response.flights && response.flights.length > 0) {
           const transformed = response.flights.map(transformFlightData);
           setFlightCache(cacheKey, transformed);
-          setFlights(sortFlights(transformed, 'best'));
+          setAllFlights(transformed);
         } else {
-          setFlights([]);
+          setAllFlights([]);
         }
       } catch (err) {
         setError(err.message || 'Could not load flights. Please try again.');
-        setFlights([]);
+        setAllFlights([]);
       } finally {
         setLoading(false);
       }
@@ -67,8 +84,6 @@ export default function FlightListingPage() {
 
   const handleSortChange = (sortId) => {
     setSortBy(sortId);
-    setFlights((prev) => sortFlights(prev, sortId));
-    // Preserve the selected flight — no need to clear it
   };
 
   const handleContinueBooking = (flight) => {
@@ -80,6 +95,39 @@ export default function FlightListingPage() {
       },
     });
   };
+
+  // Derive displayed flights from allFlights, activeFilters, and sortBy
+  const filteredFlights = useMemo(() => {
+    let result = allFlights;
+    const { stops, priceMax, airlines, timeSlots, duration } = activeFilters;
+    if (stops.length > 0)
+      result = result.filter((f) =>
+        stops.some((s) => (s === 2 ? (f.stops ?? 0) >= 2 : (f.stops ?? 0) === s))
+      );
+    if (priceMax != null)
+      result = result.filter((f) => parseFloat(f.price) <= priceMax);
+    if (airlines.length > 0)
+      result = result.filter((f) => airlines.includes(f.airline));
+    if (timeSlots.length > 0)
+      result = result.filter((f) => {
+        const h = parseInt(f.departureTime?.split(':')[0] ?? '0', 10);
+        return TIME_SLOTS.some((slot) => timeSlots.includes(slot.id) && h >= slot.start && h < slot.end);
+      });
+    if (duration === 'under-6') result = result.filter((f) => f.durationMinutes < 360);
+    else if (duration === '6-12') result = result.filter((f) => f.durationMinutes >= 360 && f.durationMinutes < 720);
+    else if (duration === '12-plus') result = result.filter((f) => f.durationMinutes >= 720);
+    return result;
+  }, [allFlights, activeFilters]);
+
+  const displayedFlights = sortFlights(filteredFlights, sortBy);
+
+  const activeFilterCount = [
+    activeFilters.stops.length > 0,
+    activeFilters.priceMax != null,
+    activeFilters.airlines.length > 0,
+    activeFilters.timeSlots.length > 0,
+    activeFilters.duration != null,
+  ].filter(Boolean).length;
 
   if (!searchCriteria) {
     return (
@@ -110,8 +158,10 @@ export default function FlightListingPage() {
 
         {/* Header with Route Info */}
         <RouteInfoHeader
-          fromAirport={`${searchCriteria.from_airport}`}
-          toAirport={`${searchCriteria.to_airport}`}
+          fromAirport={searchCriteria.from_airport}
+          toAirport={searchCriteria.to_airport}
+          fromCity={fromCity}
+          toCity={toCity}
           departDate={searchCriteria.departure_date}
           returnDate={searchCriteria.return_date}
           passengers={searchCriteria.passengers.adults + searchCriteria.passengers.children}
@@ -143,14 +193,18 @@ export default function FlightListingPage() {
         {/* Filters & Results */}
         {!loading && !error && (
           <>
-            <FlightFilters onSortChange={handleSortChange} />
+            <FlightFilters
+              onSortChange={handleSortChange}
+              onFilterOpen={() => setIsFilterOpen(true)}
+              activeFilterCount={activeFilterCount}
+            />
 
             {/* Main Content: Flight List & Booking Summary */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-gutter items-start">
               {/* Left Column: Flight List */}
               <div className="lg:col-span-2 flex flex-col gap-4">
-                {flights.length > 0 ? (
-                  flights.map((flight) => (
+                {displayedFlights.length > 0 ? (
+                  displayedFlights.map((flight) => (
                     <FlightListCard
                       key={flight.id}
                       flight={flight}
@@ -163,8 +217,18 @@ export default function FlightListingPage() {
                     <span className="material-symbols-outlined text-5xl text-[#2C2C2C] mb-4 block">
                       flight_takeoff
                     </span>
-                    <p className="text-on-surface-variant font-label-sm">No flights found for this search</p>
-                    <p className="text-[#666666] text-xs mt-2">Try adjusting your search criteria</p>
+                    <p className="text-on-surface-variant font-label-sm">No flights match your filters</p>
+                    <p className="text-[#666666] text-xs mt-2">
+                      {activeFilterCount > 0 ? 'Try resetting filters or adjusting your criteria' : 'Try adjusting your search criteria'}
+                    </p>
+                    {activeFilterCount > 0 && (
+                      <button
+                        onClick={() => setActiveFilters(DEFAULT_FILTERS)}
+                        className="mt-4 px-4 py-2 rounded-full border border-[#2C2C2C] text-on-surface-variant font-label-md text-label-md hover:border-outline transition-colors"
+                      >
+                        Reset Filters
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -179,6 +243,14 @@ export default function FlightListingPage() {
           </>
         )}
       </main>
+
+      <FlightFilterPanel
+        isOpen={isFilterOpen}
+        onClose={() => setIsFilterOpen(false)}
+        allFlights={allFlights}
+        filters={activeFilters}
+        onApply={(f) => { setActiveFilters(f); setSelectedFlight(null); }}
+      />
     </div>
   );
 }

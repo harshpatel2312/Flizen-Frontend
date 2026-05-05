@@ -85,5 +85,7 @@ export function transformFlightData(duffelFlight) {
     segments: duffelFlight.segments || [],
     conditions: duffelFlight.conditions || null,
     baggages: duffelFlight.baggages || [],
+    totalEmissionsKg: duffelFlight.total_emissions_kg || null,
+    passportRequired: duffelFlight.passport_required ?? null,
   };
 }
