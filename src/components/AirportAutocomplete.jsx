@@ -58,8 +58,9 @@ export default function AirportAutocomplete({
 
   // Handle suggestion click
   const handleSelectAirport = (airport) => {
-    setSelectedValue(airport.iata);
-    setQuery(airport.iata);
+    const display = airport.city ? `${airport.city} (${airport.iata})` : airport.iata;
+    setSelectedValue(display);
+    setQuery(display);
     setSuggestions([]);
     setIsOpen(false);
     onSelect?.(airport);

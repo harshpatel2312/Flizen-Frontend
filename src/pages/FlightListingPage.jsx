@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from 'react';
-import { Link, useSearchParams, useNavigate } from 'react-router-dom';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { Link, useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import RouteInfoHeader from '../components/RouteInfoHeader';
 import FlightFilters from '../components/FlightFilters';
@@ -15,6 +15,10 @@ import { parseSearchParams } from '../utils/searchParamUtils';
 export default function FlightListingPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { state: locationState } = useLocation();
+  // Captures restore-state passed from SeatSelectionChoicePage on back-navigation.
+  // Using a ref so it is consumed exactly once and doesn't re-trigger effects.
+  const restoreRef = useRef(locationState?.restoreInbound ?? null);
   const [selectedFlight, setSelectedFlight] = useState(null);
   const [sortBy, setSortBy] = useState('best');
   const [allFlights, setAllFlights] = useState([]);
@@ -52,12 +56,25 @@ export default function FlightListingPage() {
   useEffect(() => {
     if (!searchCriteria) return;
 
-    // Reset round-trip state on new search
-    setPhase('outbound');
-    setSelectedOutbound(null);
-    setInboundFlights([]);
-    setInboundError(null);
-    setSelectedFlight(null);
+    // Consume any back-navigation restore state exactly once
+    const restore = restoreRef.current;
+    restoreRef.current = null;
+
+    if (restore) {
+      // Restore to inbound-selection phase (user pressed Back from seat-choice)
+      setPhase('inbound');
+      setSelectedOutbound(restore.outboundFlight);
+      setSelectedFlight(restore.selectedFlight ?? null);
+      setInboundFlights([]);
+      setInboundError(null);
+    } else {
+      // Fresh navigation — reset round-trip state
+      setPhase('outbound');
+      setSelectedOutbound(null);
+      setInboundFlights([]);
+      setInboundError(null);
+      setSelectedFlight(null);
+    }
 
     const cacheKey = searchParams.toString();
     const cached = getFlightCache(cacheKey);
@@ -65,13 +82,15 @@ export default function FlightListingPage() {
     if (cached) {
       setAllFlights(cached);
       setLoading(false);
+      // Also kick off inbound load (likely cached too) so the list is ready
+      if (restore) fetchInboundFlights();
       return;
     }
 
     const fetchFlights = async () => {
       setLoading(true);
       setError(null);
-      setSelectedFlight(null);
+      if (!restore) setSelectedFlight(null);
 
       try {
         const response = await searchFlights(searchCriteria);
@@ -92,6 +111,7 @@ export default function FlightListingPage() {
     };
 
     fetchFlights();
+    if (restore) fetchInboundFlights();
   }, [searchCriteria]);
 
   const isRoundTrip = searchCriteria?.trip_type === 'round-trip';
@@ -160,7 +180,7 @@ export default function FlightListingPage() {
       state: {
         flight: isRoundTrip ? selectedOutbound : flight,
         inboundFlight: isRoundTrip ? flight : undefined,
-        searchCriteria,
+        searchCriteria: { ...searchCriteria, fromCity, toCity },
         backUrl: `/flights?${searchParams.toString()}`,
       },
     });
@@ -190,6 +210,13 @@ export default function FlightListingPage() {
   }, [allFlights, inboundFlights, activeFilters, isRoundTrip, phase]);
 
   const displayedFlights = sortFlights(filteredFlights, sortBy);
+
+  const cityMap = useMemo(() => {
+    const m = {};
+    if (searchCriteria?.from_airport && fromCity) m[searchCriteria.from_airport] = fromCity;
+    if (searchCriteria?.to_airport && toCity) m[searchCriteria.to_airport] = toCity;
+    return m;
+  }, [searchCriteria, fromCity, toCity]);
 
   const activeFilterCount = [
     activeFilters.stops.length > 0,
@@ -238,8 +265,8 @@ export default function FlightListingPage() {
           }
           subheading={
             isRoundTrip
-              ? (phase === 'outbound' ? 'Choose your departure flight' : 'Choose your return flight')
-              : 'Choose the best flight for your trip'
+              ? (phase === 'outbound' ? 'Departure Flight' : 'Return Flight')
+              : 'Find Your Flight'
           }
           fromAirport={isRoundTrip && phase === 'inbound' ? searchCriteria.to_airport : searchCriteria.from_airport}
           toAirport={isRoundTrip && phase === 'inbound' ? searchCriteria.from_airport : searchCriteria.to_airport}
@@ -334,6 +361,7 @@ export default function FlightListingPage() {
                       flight={flight}
                       isSelected={selectedFlight?.id === flight.id}
                       onClick={() => setSelectedFlight(flight)}
+                      cityMap={cityMap}
                     />
                   ))
                 ) : (
@@ -361,6 +389,7 @@ export default function FlightListingPage() {
               <FlightDetailsPanel
                 flight={selectedFlight}
                 searchCriteria={searchCriteria}
+                cityMap={cityMap}
                 onContinue={handleContinueBooking}
                 ctaLabel={isRoundTrip && phase === 'outbound' ? 'Select Flight' : 'Continue Booking'}
               />

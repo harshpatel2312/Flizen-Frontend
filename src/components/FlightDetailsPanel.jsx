@@ -1,6 +1,6 @@
 import { formatDuration, formatPrice, getStopsLabel } from '../utils/flightUtils';
 
-export default function FlightDetailsPanel({ flight, inboundFlight, searchCriteria, onContinue, ctaLabel = 'Continue Booking' }) {
+export default function FlightDetailsPanel({ flight, inboundFlight, searchCriteria, cityMap: propCityMap, onContinue, ctaLabel = 'Continue Booking' }) {
   if (!flight) {
     return (
       <div className="lg:sticky lg:top-24">
@@ -17,6 +17,12 @@ export default function FlightDetailsPanel({ flight, inboundFlight, searchCriter
     : 1;
 
   const isRoundTrip = !!inboundFlight;
+
+  const cityMap = {
+    ...(propCityMap || {}),
+    ...(searchCriteria?.from_airport && searchCriteria?.fromCity ? { [searchCriteria.from_airport]: searchCriteria.fromCity } : {}),
+    ...(searchCriteria?.to_airport && searchCriteria?.toCity ? { [searchCriteria.to_airport]: searchCriteria.toCity } : {}),
+  };
 
   // Combined price for round trip
   const outboundPrice = parseFloat(flight.price) || 0;
@@ -36,7 +42,7 @@ export default function FlightDetailsPanel({ flight, inboundFlight, searchCriter
             Departure Flight
           </p>
         )}
-        <FlightBlock flight={flight} totalPassengers={totalPassengers} />
+        <FlightBlock flight={flight} totalPassengers={totalPassengers} cityMap={cityMap} />
 
         {/* ── Inbound flight block ── */}
         {isRoundTrip && (
@@ -45,7 +51,7 @@ export default function FlightDetailsPanel({ flight, inboundFlight, searchCriter
             <p className="font-label-sm text-label-sm text-outline uppercase tracking-widest mb-3">
               Return Flight
             </p>
-            <FlightBlock flight={inboundFlight} totalPassengers={totalPassengers} />
+            <FlightBlock flight={inboundFlight} totalPassengers={totalPassengers} cityMap={cityMap} />
           </>
         )}
 
@@ -77,7 +83,11 @@ export default function FlightDetailsPanel({ flight, inboundFlight, searchCriter
 }
 
 // ─── Renders one flight's full detail block ───────────────────────────────────
-function FlightBlock({ flight, totalPassengers }) {
+function FlightBlock({ flight, totalPassengers, cityMap }) {
+  const fmtAirport = (code) => {
+    const city = cityMap?.[code];
+    return city ? `${city} (${code})` : (code || '—');
+  };
   const durationLabel = formatDuration(flight.duration);
   const stopsLabel  = getStopsLabel(flight.stops);
 
@@ -94,9 +104,9 @@ function FlightBlock({ flight, totalPassengers }) {
       {/* Route overview */}
       <div className="mb-4">
         <div className="flex items-center gap-2 mb-1">
-          <span className="font-headline-sm text-headline-sm text-primary">{flight.fromAirport}</span>
+          <span className="font-headline-sm text-headline-sm text-primary">{fmtAirport(flight.fromAirport)}</span>
           <span className="material-symbols-outlined text-outline text-base">arrow_right_alt</span>
-          <span className="font-headline-sm text-headline-sm text-primary">{flight.toAirport}</span>
+          <span className="font-headline-sm text-headline-sm text-primary">{fmtAirport(flight.toAirport)}</span>
         </div>
         <p className="text-outline font-label-sm text-label-sm">
           {flight.airline}

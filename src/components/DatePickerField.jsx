@@ -93,22 +93,36 @@ export default function DatePickerField({
     return days;
   };
 
+  // Accepts a Date, a YYYY-MM-DD string, or null and returns a UTC-midnight Date.
+  const toUTCMidnight = (input) => {
+    if (!input) return null;
+    if (typeof input === 'string') return parseUTCDate(input);
+    if (input instanceof Date) {
+      return new Date(Date.UTC(input.getUTCFullYear(), input.getUTCMonth(), input.getUTCDate()));
+    }
+    return null;
+  };
+
   // Check if date is disabled (date is UTC Date object)
   const isDateDisabled = (date) => {
     if (!date) return false;
-    
+
     // Get today as UTC at midnight
     const today = new Date();
     const todayUTC = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
 
-    if (date < todayUTC) {
+    // Effective lower bound = later of (today, minDate)
+    const minBound = toUTCMidnight(minDate);
+    const lowerBound = minBound && minBound > todayUTC ? minBound : todayUTC;
+
+    if (date < lowerBound) {
       return true;
     }
 
     // Check max date
     if (maxDate) {
-      const maxDateObj = parseUTCDate(maxDate);
-      if (date > maxDateObj) {
+      const maxDateObj = toUTCMidnight(maxDate);
+      if (maxDateObj && date > maxDateObj) {
         return true;
       }
     }
