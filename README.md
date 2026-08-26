@@ -206,3 +206,64 @@ When a user navigates back to the dashboard from `/flights`, the booking form is
 - Typography: Material Design 3 type tokens via Tailwind (`font-headline-md`, `font-label-sm`, etc.).
 - Icons: Google Material Symbols (`material-symbols-outlined` class).
 - Custom scrollbar style (thin, white-30% thumb) defined in `index.css` and `AirportAutocomplete.css`, applied to dropdown lists and `FlightDetailsPanel`.
+ 
+ 
+---
+
+## Payment & Booking Setup
+
+### Required environment variables (`.env.local`)
+
+| Variable                              | Purpose                                             |
+|---------------------------------------|-----------------------------------------------------|
+| `VITE_API_BASE_URL`                 | Flizen backend URL (dev: `http://localhost:8000`).|
+| `VITE_STRIPE_PUBLISHABLE_KEY`       | Stripe publishable key (`pk_test_...` locally).   |
+| `VITE_FIREBASE_API_KEY`             | Firebase Web SDK config.                            |
+| `VITE_FIREBASE_AUTH_DOMAIN`         | Firebase auth domain.                               |
+| `VITE_FIREBASE_PROJECT_ID`          | Firebase project id.                                |
+| `VITE_FIREBASE_STORAGE_BUCKET`      | Firebase storage bucket.                            |
+| `VITE_FIREBASE_MESSAGING_SENDER_ID` | Firebase messaging sender id.                       |
+| `VITE_FIREBASE_APP_ID`              | Firebase web app id.                                |
+| `VITE_GOOGLE_MAPS_API_KEY`          | Optional — Google Maps for airport picker.          |
+
+`.env.local` is gitignored. Never commit it.
+
+### Stripe test setup
+
+Use the publishable **test** key (`pk_test_...`). Enter test card `4242 4242 4242 4242` on the payment page; expiry any future date, any CVC. Card `4000 0027 6000 3184` triggers 3D-Secure, which uses the `return_url` `/payment/:bookingId/processing`.
+
+### Duffel test setup
+
+The backend performs all Duffel API calls; the frontend only displays the offers it returns. No frontend-side Duffel key is needed. Just make sure the backend has `DUFFEL_ACCESS_TOKEN=duffel_test_...`.
+
+### Payment / booking status flow
+
+1. User completes passenger details -> `POST /api/bookings/draft` (one Duffel offer id, server-authoritative price).
+2. `/payment/:bookingId` mounts Stripe Elements against `POST /api/payments/intents`.
+3. Stripe redirects to `/payment/:bookingId/processing` (or `/booking/:bookingId`).
+4. The result page polls `GET /api/bookings/:id` every 2.5s until status becomes terminal.
+5. The airline booking reference is shown **only** after status = `confirmed`.
+
+### Seat-selection limitation
+
+The seat map is a local visual mock. Picks are stored server-side as UI preferences with `confirmed_with_duffel: false` and are never sent to Duffel. Airlines will assign real seats at check-in until a Duffel seat-map integration is added.
+
+### Local dev commands
+
+`ash
+npm install
+npm run dev       # http://localhost:5173
+npm run build     # production bundle
+npm run lint      # eslint
+`
+
+No frontend unit-test suite is configured yet.
+
+### Production deployment checklist
+
+1. Set `VITE_API_BASE_URL` to the HTTPS backend URL, `VITE_STRIPE_PUBLISHABLE_KEY` to the live `pk_live_...` key.
+2. Use the **live** Firebase web config (from a production project distinct from test).
+3. Serve behind HTTPS. Vite build output is fully static (`dist/`).
+4. Add the production origin to the backend's `CORS_ORIGINS` and to Firebase Auth authorised domains.
+5. Verify Stripe redirect URLs (`FRONTEND_URL` on the backend) match the deployed origin.
+6. Purge any built bundles from before switching to production keys — publishable keys are baked into `dist/` at build time.

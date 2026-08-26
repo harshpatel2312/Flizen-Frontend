@@ -8,6 +8,8 @@ import FlightListingPage from './pages/FlightListingPage.jsx'
 import PassengerDetailsPage from './pages/PassengerDetailsPage.jsx'
 import SeatSelectionChoicePage from './pages/SeatSelectionChoicePage.jsx'
 import SeatSelectionPage from './pages/SeatSelectionPage.jsx'
+import PaymentPage from './pages/PaymentPage.jsx'
+import BookingResultPage from './pages/BookingResultPage.jsx'
 import ProfilePage from './pages/ProfilePage.jsx'
 import LoginPage from './pages/LoginPage.jsx'
 import SignUpPage from './pages/SignUpPage.jsx'
@@ -61,6 +63,30 @@ ReactDOM.createRoot(document.getElementById('root')).render(
             element={
               <ProtectedRoute>
                 <SeatSelectionPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/payment/:bookingId"
+            element={
+              <ProtectedRoute>
+                <PaymentPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/payment/:bookingId/processing"
+            element={
+              <ProtectedRoute>
+                <BookingResultPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/booking/:bookingId"
+            element={
+              <ProtectedRoute>
+                <BookingResultPage />
               </ProtectedRoute>
             }
           />
