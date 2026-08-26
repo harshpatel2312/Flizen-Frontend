@@ -60,8 +60,8 @@ export default function BookingPanel() {
       newErrors.return = 'Return date is required for round trips';
     }
 
-    if (returnDate && departureDate && new Date(returnDate) <= new Date(departureDate)) {
-      newErrors.return = 'Return date must be after departure date';
+    if (returnDate && departureDate && new Date(returnDate) < new Date(departureDate)) {
+      newErrors.return = 'Return date cannot be before departure date';
     }
 
     setErrors(newErrors);
@@ -155,7 +155,7 @@ export default function BookingPanel() {
           label="From"
           placeholder="Where from?"
           icon="flight_takeoff"
-          value={fromAirport?.iata || ''}
+          value={fromAirport ? (fromAirport.city ? `${fromAirport.city} (${fromAirport.iata})` : fromAirport.iata) : ''}
           onChange={(text) => {
             if (!text) {
               setFromAirport(null);
@@ -181,7 +181,7 @@ export default function BookingPanel() {
           label="To"
           placeholder="Where to?"
           icon="flight_land"
-          value={toAirport?.iata || ''}
+          value={toAirport ? (toAirport.city ? `${toAirport.city} (${toAirport.iata})` : toAirport.iata) : ''}
           onChange={(text) => {
             if (!text) {
               setToAirport(null);
@@ -203,6 +203,11 @@ export default function BookingPanel() {
           onChange={(date) => {
             setDepartureDate(date);
             setErrors({ ...errors, departure: undefined });
+            // Clear stale return date if it is now before the new departure (same-day is allowed).
+            if (returnDate && date && new Date(returnDate) < new Date(date)) {
+              setReturnDate('');
+              setErrors((prev) => ({ ...prev, departure: undefined, return: undefined }));
+            }
           }}
           error={errors.departure}
         />

@@ -308,7 +308,7 @@ export default function PassengerDetailsPage() {
   const navigate   = useNavigate();
   const { user }   = useAuth();
 
-  const { flight, inboundFlight, searchCriteria, backUrl } = location.state || {};
+  const { flight, inboundFlight, searchCriteria, backUrl, passengers: savedPassengers, contact: savedContact } = location.state || {};
 
   // Build ordered traveler list from search criteria counts
   const travelers = (() => {
@@ -334,15 +334,21 @@ export default function PassengerDetailsPage() {
   });
 
   const [passengers, setPassengers] = useState(() =>
-    travelers.map((_, i) => blankPassenger(i === 0))
+    savedPassengers?.length === travelers.length
+      ? savedPassengers
+      : travelers.map((_, i) => blankPassenger(i === 0))
   );
-  const [contact, setContact] = useState({ email: user?.email || '', phone: '' });
+  const [contact, setContact] = useState(
+    savedContact ?? { email: user?.email || '', phone: '' }
+  );
   const [errors, setErrors] = useState([]);
   const [contactErrors, setContactErrors] = useState({});
 
   // ── pre-populate primary passenger from saved profile ──────────────────────
+  // Skip if we're restoring data from a back-navigation (savedPassengers already filled)
   useEffect(() => {
     if (!user) return;
+    if (savedPassengers?.length === travelers.length) return; // already restored
     fetchProfile(user)
       .then((profile) => {
         if (!profile) return;
@@ -469,7 +475,22 @@ export default function PassengerDetailsPage() {
 
   const handleContinue = () => {
     if (!validate()) return;
-    navigate('/payment', { state: { flight, searchCriteria, passengers, contact } });
+    navigate('/seat-choice', { state: { flight, inboundFlight, searchCriteria, passengers, contact, backUrl } });
+  };
+
+  const isRoundTrip = !!inboundFlight;
+
+  const handleBack = () => {
+    navigate(backUrl || '/flights', {
+      state: isRoundTrip
+        ? {
+            restoreInbound: {
+              outboundFlight: flight,
+              selectedFlight: inboundFlight,
+            },
+          }
+        : undefined,
+    });
   };
 
   // ── no flight guard ───────────────────────────────────────────────────────
@@ -500,7 +521,7 @@ export default function PassengerDetailsPage() {
         {/* ── Page header ─────────────────────────────────────────────────── */}
         <div className="flex flex-col gap-4">
           <button
-            onClick={() => navigate(backUrl || -1)}
+            onClick={handleBack}
             className="inline-flex items-center gap-2 text-on-surface-variant hover:text-primary transition-colors font-label-md text-label-md w-fit"
           >
             <span className="material-symbols-outlined text-[18px]">arrow_back</span>

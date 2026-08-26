@@ -6,6 +6,8 @@ import ProtectedRoute from './components/ProtectedRoute.jsx'
 import App from './App.jsx'
 import FlightListingPage from './pages/FlightListingPage.jsx'
 import PassengerDetailsPage from './pages/PassengerDetailsPage.jsx'
+import SeatSelectionChoicePage from './pages/SeatSelectionChoicePage.jsx'
+import SeatSelectionPage from './pages/SeatSelectionPage.jsx'
 import ProfilePage from './pages/ProfilePage.jsx'
 import LoginPage from './pages/LoginPage.jsx'
 import SignUpPage from './pages/SignUpPage.jsx'
@@ -43,6 +45,22 @@ ReactDOM.createRoot(document.getElementById('root')).render(
             element={
               <ProtectedRoute>
                 <PassengerDetailsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/seat-choice"
+            element={
+              <ProtectedRoute>
+                <SeatSelectionChoicePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/seats"
+            element={
+              <ProtectedRoute>
+                <SeatSelectionPage />
               </ProtectedRoute>
             }
           />

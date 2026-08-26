@@ -321,7 +321,7 @@ export default function ProfilePage() {
           className="flex items-center gap-2 text-outline hover:text-primary font-label-md text-label-md transition-colors self-start"
         >
           <span className="material-symbols-outlined text-[18px]">arrow_back</span>
-          Back to dashboard
+          Back to Home
         </button>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-container-margin">
@@ -470,7 +470,7 @@ export default function ProfilePage() {
               <AirportAutocomplete
                 placeholder="Search for your home airport"
                 icon="home"
-                value={prefs.homeAirport?.iata || ''}
+                value={prefs.homeAirport ? `${prefs.homeAirport.name} — ${prefs.homeAirport.city} (${prefs.homeAirport.iata})` : ''}
                 onChange={(text) => { if (!text) setPr('homeAirport', null); }}
                 onSelect={(airport) => setPr('homeAirport', airport)}
               />

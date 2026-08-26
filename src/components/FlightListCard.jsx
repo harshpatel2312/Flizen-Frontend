@@ -1,6 +1,10 @@
 import { formatDuration, formatPrice, getStopsLabel } from '../utils/flightUtils';
 
-export default function FlightListCard({ flight, isSelected, onClick }) {
+export default function FlightListCard({ flight, isSelected, onClick, cityMap }) {
+  const fmtAirport = (code) => {
+    const city = cityMap?.[code];
+    return city ? `${city} (${code})` : (code || '—');
+  };
   const durationLabel = formatDuration(flight.duration);
   const stopsLabel = getStopsLabel(flight.stops);
   const priceLabel = formatPrice(flight.price, flight.currency);
@@ -57,7 +61,7 @@ export default function FlightListCard({ flight, isSelected, onClick }) {
         {/* Departure */}
         <div className="text-left w-1/4">
           <p className="font-headline-md text-headline-md text-primary">{flight.departureTime}</p>
-          <p className="font-label-sm text-label-sm text-outline">{flight.fromAirport}</p>
+          <p className="font-label-sm text-label-sm text-outline">{fmtAirport(flight.fromAirport)}</p>
         </div>
 
         {/* Duration & stops */}
@@ -74,7 +78,7 @@ export default function FlightListCard({ flight, isSelected, onClick }) {
         {/* Arrival */}
         <div className="text-right w-1/4">
           <p className="font-headline-md text-headline-md text-primary">{flight.arrivalTime}</p>
-          <p className="font-label-sm text-label-sm text-outline">{flight.toAirport}</p>
+          <p className="font-label-sm text-label-sm text-outline">{fmtAirport(flight.toAirport)}</p>
         </div>
       </div>
 
