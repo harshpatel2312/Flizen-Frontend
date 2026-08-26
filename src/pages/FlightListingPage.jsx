@@ -6,7 +6,7 @@ import FlightFilters from '../components/FlightFilters';
 import FlightFilterPanel, { DEFAULT_FILTERS, TIME_SLOTS } from '../components/FlightFilterPanel';
 import FlightListCard from '../components/FlightListCard';
 import FlightDetailsPanel from '../components/FlightDetailsPanel';
-import { searchFlights, transformFlightData } from '../services/flightService';
+import { searchFlights, transformFlightData, transformOfferToRoundTripPair } from '../services/flightService';
 import { getFlightCache, setFlightCache, clearFlightCache } from '../services/flightCache';
 import { getAirport } from '../services/apiService';
 import { sortFlights, formatDuration, formatPrice, getStopsLabel } from '../utils/flightUtils';
@@ -22,6 +22,9 @@ export default function FlightListingPage() {
   const [selectedFlight, setSelectedFlight] = useState(null);
   const [sortBy, setSortBy] = useState('best');
   const [allFlights, setAllFlights] = useState([]);
+  // Round-trip only: one entry per Duffel offer with matched outbound/inbound
+  // display objects that share the offer id. This is the ONE bookable unit.
+  const [pairs, setPairs] = useState([]);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [activeFilters, setActiveFilters] = useState(DEFAULT_FILTERS);
   const [loading, setLoading] = useState(true);
@@ -32,7 +35,7 @@ export default function FlightListingPage() {
   const [phase, setPhase] = useState('outbound'); // 'outbound' | 'inbound'
   const [selectedOutbound, setSelectedOutbound] = useState(null);
   const [inboundFlights, setInboundFlights] = useState([]);
-  const [inboundLoading, setInboundLoading] = useState(false);
+  const [inboundLoading] = useState(false);
   const [inboundError, setInboundError] = useState(null);
 
   // Parse search params from URL
@@ -80,10 +83,9 @@ export default function FlightListingPage() {
     const cached = getFlightCache(cacheKey);
 
     if (cached) {
-      setAllFlights(cached);
+      setAllFlights(cached.flights || cached);
+      setPairs(cached.pairs || []);
       setLoading(false);
-      // Also kick off inbound load (likely cached too) so the list is ready
-      if (restore) fetchInboundFlights();
       return;
     }
 
@@ -94,61 +96,45 @@ export default function FlightListingPage() {
 
       try {
         const response = await searchFlights(searchCriteria);
+        const rawOffers = response.flights || [];
+        const isRT = searchCriteria.trip_type === 'round-trip' && !!searchCriteria.return_date;
 
-        if (response.flights && response.flights.length > 0) {
-          const transformed = response.flights.map(transformFlightData);
-          setFlightCache(cacheKey, transformed);
-          setAllFlights(transformed);
+        if (isRT) {
+          // Round-trip: derive matched outbound+inbound pairs from single offers.
+          const pairsArr = rawOffers
+            .map(transformOfferToRoundTripPair)
+            .filter(Boolean);
+          const outbounds = pairsArr.map((p) => p.outbound);
+          setPairs(pairsArr);
+          setAllFlights(outbounds);
+          setFlightCache(cacheKey, { flights: outbounds, pairs: pairsArr });
         } else {
-          setAllFlights([]);
+          const transformed = rawOffers.map(transformFlightData);
+          setPairs([]);
+          setAllFlights(transformed);
+          setFlightCache(cacheKey, { flights: transformed, pairs: [] });
         }
       } catch (err) {
         setError(err.message || 'Could not load flights. Please try again.');
         setAllFlights([]);
+        setPairs([]);
       } finally {
         setLoading(false);
       }
     };
 
     fetchFlights();
-    if (restore) fetchInboundFlights();
   }, [searchCriteria]);
 
   const isRoundTrip = searchCriteria?.trip_type === 'round-trip';
 
-  const fetchInboundFlights = async () => {
-    if (!searchCriteria) return;
-    const cacheKey = `inbound_${searchParams.toString()}`;
-    const cached = getFlightCache(cacheKey);
-    if (cached) {
-      setInboundFlights(cached);
-      return;
-    }
-    setInboundLoading(true);
-    setInboundError(null);
-    const inboundCriteria = {
-      ...searchCriteria,
-      from_airport: searchCriteria.to_airport,
-      to_airport: searchCriteria.from_airport,
-      departure_date: searchCriteria.return_date,
-      return_date: null,
-    };
-    try {
-      const response = await searchFlights(inboundCriteria);
-      if (response.flights && response.flights.length > 0) {
-        const transformed = response.flights.map(transformFlightData);
-        setFlightCache(cacheKey, transformed);
-        setInboundFlights(transformed);
-      } else {
-        setInboundFlights([]);
-      }
-    } catch (err) {
-      setInboundError(err.message || 'Could not load return flights.');
-      setInboundFlights([]);
-    } finally {
-      setInboundLoading(false);
-    }
-  };
+  // Return list for round-trip is deterministic once the outbound is picked:
+  // it is exactly the inbound slice of the SAME Duffel offer.
+  const derivedInboundFlights = useMemo(() => {
+    if (!isRoundTrip || phase !== 'inbound' || !selectedOutbound) return [];
+    const p = pairs.find((x) => x.offerId === selectedOutbound.offerId);
+    return p ? [p.inbound] : [];
+  }, [pairs, isRoundTrip, phase, selectedOutbound]);
 
   const handleSortChange = (sortId) => {
     setSortBy(sortId);
@@ -160,7 +146,9 @@ export default function FlightListingPage() {
     setSelectedFlight(null);
     setActiveFilters(DEFAULT_FILTERS);
     setSortBy('best');
-    fetchInboundFlights();
+    // Inbound list is derived from `pairs` in a useMemo — no fetch required.
+    setInboundFlights([]);
+    setInboundError(null);
   };
 
   const handleChangeOutbound = () => {
@@ -186,9 +174,9 @@ export default function FlightListingPage() {
     });
   };
 
-  // Derive displayed flights from allFlights/inboundFlights, activeFilters, and sortBy
+  // Derive displayed flights from allFlights/derivedInboundFlights, activeFilters, and sortBy
   const filteredFlights = useMemo(() => {
-    let result = isRoundTrip && phase === 'inbound' ? inboundFlights : allFlights;
+    let result = isRoundTrip && phase === 'inbound' ? derivedInboundFlights : allFlights;
     const { stops, priceMax, airlines, timeSlots, duration } = activeFilters;
     if (stops.length > 0)
       result = result.filter((f) =>
@@ -207,7 +195,7 @@ export default function FlightListingPage() {
     else if (duration === '6-12') result = result.filter((f) => f.durationMinutes >= 360 && f.durationMinutes < 720);
     else if (duration === '12-plus') result = result.filter((f) => f.durationMinutes >= 720);
     return result;
-  }, [allFlights, inboundFlights, activeFilters, isRoundTrip, phase]);
+  }, [allFlights, derivedInboundFlights, activeFilters, isRoundTrip, phase]);
 
   const displayedFlights = sortFlights(filteredFlights, sortBy);
 

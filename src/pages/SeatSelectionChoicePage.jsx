@@ -4,10 +4,11 @@
 // Presents a clean, deliberate choice: pick seats or go straight to checkout.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import { formatPrice, formatDuration, getStopsLabel } from '../utils/flightUtils';
+import { buildDraftPayload, createBookingDraft } from '../services/bookingService';
 
 // ─── Mini flight row (used inside TripSummaryPanel) ──────────────────────────
 function FlightMiniCard({ flight, cityMap }) {
@@ -45,11 +46,14 @@ function FlightMiniCard({ flight, cityMap }) {
 }
 
 // ─── Choice card ──────────────────────────────────────────────────────────────
-function ChoiceCard({ icon, title, subtitle, ctaLabel, onClick, isPrimary }) {
+function ChoiceCard({ icon, title, subtitle, ctaLabel, onClick, isPrimary, disabled }) {
   return (
     <button
       onClick={onClick}
+      disabled={disabled}
       className={`w-full text-left rounded-xl border transition-all duration-200 group ${
+        disabled ? 'opacity-60 cursor-not-allowed ' : ''
+      }${
         isPrimary
           ? 'bg-primary text-on-primary border-primary hover:opacity-[0.92]'
           : 'bg-[#121212] border-[#2C2C2C] hover:border-[#4A4A4A] hover:bg-[#181818]'
@@ -180,6 +184,9 @@ export default function SeatSelectionChoicePage() {
   const navigate = useNavigate();
   const { flight, inboundFlight, searchCriteria, passengers, contact, backUrl } = location.state || {};
 
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [checkoutError,   setCheckoutError]   = useState(null);
+
   // Guard: redirect if no flight data
   useEffect(() => {
     if (!flight) navigate(backUrl || '/flights', { replace: true });
@@ -206,10 +213,23 @@ export default function SeatSelectionChoicePage() {
     });
   };
 
-  const handleSkipToCheckout = () => {
-    navigate('/payment', {
-      state: { flight, inboundFlight, searchCriteria, passengers, contact },
-    });
+  const handleSkipToCheckout = async () => {
+    if (checkoutLoading) return;
+    setCheckoutError(null);
+    setCheckoutLoading(true);
+    try {
+      const payload = buildDraftPayload({
+        flight, inboundFlight, searchCriteria, passengers, contact,
+        selectedSeats: null,
+      });
+      const draft = await createBookingDraft(payload);
+      navigate(`/payment/${encodeURIComponent(draft.booking_id)}`, {
+        state: { flight, inboundFlight, searchCriteria, passengers, contact },
+      });
+    } catch (err) {
+      setCheckoutError(err.message || 'Could not start checkout. Please try again.');
+      setCheckoutLoading(false);
+    }
   };
 
   // Back → return to passenger details, preserving their filled-in data
@@ -259,12 +279,22 @@ export default function SeatSelectionChoicePage() {
               <ChoiceCard
                 isPrimary={false}
                 icon="skip_next"
-                title="Skip to Checkout"
+                title={checkoutLoading ? 'Preparing checkout…' : 'Skip to Checkout'}
                 subtitle="Seats will be automatically assigned at check-in."
                 ctaLabel="Continue"
                 onClick={handleSkipToCheckout}
+                disabled={checkoutLoading}
               />
             </div>
+
+            {checkoutError && (
+              <div className="p-4 bg-error/20 border border-error rounded-xl text-error">
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined">error</span>
+                  <span className="font-label-md text-label-md">{checkoutError}</span>
+                </div>
+              </div>
+            )}
 
             <p className="text-[11px] text-[#606060] leading-relaxed">
               Seat selection is complimentary · Preferences are subject to availability

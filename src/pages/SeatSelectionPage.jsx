@@ -11,6 +11,7 @@ import Navbar from '../components/Navbar';
 import SeatMap from '../components/SeatMap';
 import { formatDuration } from '../utils/flightUtils';
 import { getAirport } from '../services/apiService';
+import { buildDraftPayload, createBookingDraft } from '../services/bookingService';
 
 // ─── Passenger colour palette (mirrors SeatMap.jsx) ──────────────────────────
 const P_COLORS = [
@@ -176,6 +177,8 @@ function SummaryPanel({
   onContinue,
   onNext,
   isLastSegment,
+  checkoutLoading,
+  checkoutError,
 }) {
   const totalRequired = segments.length * totalPassengers;
   const totalFilled = segments.reduce(
@@ -315,24 +318,35 @@ function SummaryPanel({
       ) : (
         <button
           onClick={onContinue}
-          disabled={!allFilled}
+          disabled={!allFilled || checkoutLoading}
           className={`w-full py-3 rounded-full font-label-md text-label-md font-bold transition-all duration-150 ${
-            allFilled
+            allFilled && !checkoutLoading
               ? 'bg-primary text-on-primary hover:opacity-90 cursor-pointer'
               : 'bg-[#252525] text-[#606060] cursor-not-allowed'
           }`}
         >
-          Continue to Checkout
+          {checkoutLoading ? 'Preparing checkout…' : 'Continue to Checkout'}
         </button>
       )}
 
       {/* Skip — always visible so user can exit seat selection at any point */}
       <button
         onClick={onContinue}
-        className="w-full mt-3 py-2 text-center font-label-sm text-label-sm text-outline hover:text-primary transition-colors"
+        disabled={checkoutLoading}
+        className={`w-full mt-3 py-2 text-center font-label-sm text-label-sm transition-colors ${
+          checkoutLoading
+            ? 'text-[#606060] cursor-not-allowed'
+            : 'text-outline hover:text-primary'
+        }`}
       >
         Skip seat selection · go to checkout
       </button>
+
+      {checkoutError && (
+        <div className="mt-4 p-3 bg-error/20 border border-error rounded-xl text-error">
+          <p className="font-label-sm text-label-sm">{checkoutError}</p>
+        </div>
+      )}
     </div>
   );
 }
@@ -359,6 +373,8 @@ export default function SeatSelectionPage() {
   const [activeSegmentIdx, setActiveSegmentIdx] = useState(0);
   const [activePassenger, setActivePassenger]   = useState(0);
   const [cityMap, setCityMap]                   = useState({});
+  const [checkoutLoading, setCheckoutLoading]   = useState(false);
+  const [checkoutError,   setCheckoutError]     = useState(null);
 
   useEffect(() => {
     if (!flight) navigate(backUrl || '/flights', { replace: true });
@@ -412,10 +428,22 @@ export default function SeatSelectionPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleContinue = () => {
-    navigate('/payment', {
-      state: { flight, inboundFlight, searchCriteria, passengers, contact, selectedSeats },
-    });
+  const handleContinue = async () => {
+    if (checkoutLoading) return;
+    setCheckoutError(null);
+    setCheckoutLoading(true);
+    try {
+      const payload = buildDraftPayload({
+        flight, inboundFlight, searchCriteria, passengers, contact, selectedSeats,
+      });
+      const draft = await createBookingDraft(payload);
+      navigate(`/payment/${encodeURIComponent(draft.booking_id)}`, {
+        state: { flight, inboundFlight, searchCriteria, passengers, contact, selectedSeats },
+      });
+    } catch (err) {
+      setCheckoutError(err.message || 'Could not start checkout. Please try again.');
+      setCheckoutLoading(false);
+    }
   };
 
   const handleBack = () => {
@@ -581,6 +609,8 @@ export default function SeatSelectionPage() {
               onContinue={handleContinue}
               onNext={handleNext}
               isLastSegment={isLastSegment}
+              checkoutLoading={checkoutLoading}
+              checkoutError={checkoutError}
             />
           </div>
         </div>
