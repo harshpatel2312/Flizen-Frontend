@@ -1,7 +1,6 @@
-import { useState } from 'react';
-
-export default function FlightFilters({ onSortChange, onFilterOpen, activeFilterCount = 0 }) {
-  const [activeSort, setActiveSort] = useState('best');
+export default function FlightFilters({ value = 'best', onSortChange, onFilterOpen, activeFilterCount = 0 }) {
+  // Controlled by the parent so restored / reset sorts are reflected here.
+  const activeSort = value;
 
   const sorts = [
     { id: 'best',     label: 'Best'     },
@@ -10,7 +9,6 @@ export default function FlightFilters({ onSortChange, onFilterOpen, activeFilter
   ];
 
   const handleSort = (sortId) => {
-    setActiveSort(sortId);
     onSortChange?.(sortId);
   };
 

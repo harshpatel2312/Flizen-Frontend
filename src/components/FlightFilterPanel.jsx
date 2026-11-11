@@ -131,7 +131,7 @@ export default function FlightFilterPanel({ isOpen, onClose, allFlights = [], fi
         </div>
 
         {/* Scrollable content */}
-        <div className="flex-1 overflow-y-auto px-6 py-6 space-y-8 pb-36">
+        <div className="flex-1 overflow-y-auto px-6 py-6 space-y-8 pb-36 flight-details-scroll">
 
           {/* Stops */}
           <section>

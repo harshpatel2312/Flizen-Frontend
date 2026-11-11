@@ -6,11 +6,13 @@ import FlightFilters from '../components/FlightFilters';
 import FlightFilterPanel, { DEFAULT_FILTERS, TIME_SLOTS } from '../components/FlightFilterPanel';
 import FlightListCard from '../components/FlightListCard';
 import FlightDetailsPanel from '../components/FlightDetailsPanel';
+import Sep from '../components/Sep';
 import { searchFlights, transformFlightData, transformOfferToRoundTripPair } from '../services/flightService';
 import { getFlightCache, setFlightCache, clearFlightCache } from '../services/flightCache';
 import { getAirport } from '../services/apiService';
 import { sortFlights, formatDuration, formatPrice, getStopsLabel } from '../utils/flightUtils';
 import { parseSearchParams } from '../utils/searchParamUtils';
+import { recallFlowState, rememberFlowState } from '../utils/bookingFlowMemory';
 
 export default function FlightListingPage() {
   const [searchParams] = useSearchParams();
@@ -19,6 +21,12 @@ export default function FlightListingPage() {
   // Captures restore-state passed from SeatSelectionChoicePage on back-navigation.
   // Using a ref so it is consumed exactly once and doesn't re-trigger effects.
   const restoreRef = useRef(locationState?.restoreInbound ?? null);
+  // Remembered selections (sort, filters, picked flights) for this exact search,
+  // applied once flights are loaded. Selections are only saved after hydration so
+  // the initial default state never overwrites what was remembered.
+  const memoryKey = `listing:${searchParams.toString()}`;
+  const pendingMemoryRef = useRef(null);
+  const hydratedRef = useRef(false);
   const [selectedFlight, setSelectedFlight] = useState(null);
   const [sortBy, setSortBy] = useState('best');
   const [allFlights, setAllFlights] = useState([]);
@@ -62,6 +70,8 @@ export default function FlightListingPage() {
     // Consume any back-navigation restore state exactly once
     const restore = restoreRef.current;
     restoreRef.current = null;
+    hydratedRef.current = Boolean(restore);
+    pendingMemoryRef.current = restore ? null : recallFlowState(memoryKey);
 
     if (restore) {
       // Restore to inbound-selection phase (user pressed Back from seat-choice)
@@ -127,6 +137,41 @@ export default function FlightListingPage() {
   }, [searchCriteria]);
 
   const isRoundTrip = searchCriteria?.trip_type === 'round-trip';
+
+  // Apply remembered selections once the flight list for this search is ready.
+  useEffect(() => {
+    if (!searchCriteria || loading || hydratedRef.current) return;
+    const mem = pendingMemoryRef.current;
+    pendingMemoryRef.current = null;
+    if (mem) {
+      if (mem.sortBy) setSortBy(mem.sortBy);
+      if (mem.activeFilters) setActiveFilters({ ...DEFAULT_FILTERS, ...mem.activeFilters });
+      if (isRoundTrip && mem.phase === 'inbound' && mem.selectedOutboundOfferId) {
+        const pair = pairs.find((p) => p.offerId === mem.selectedOutboundOfferId);
+        if (pair) {
+          setSelectedOutbound(pair.outbound);
+          setPhase('inbound');
+          if (mem.selectedFlightId === pair.inbound.id) setSelectedFlight(pair.inbound);
+        }
+      } else if (mem.selectedFlightId) {
+        const match = allFlights.find((f) => f.id === mem.selectedFlightId);
+        if (match) setSelectedFlight(match);
+      }
+    }
+    hydratedRef.current = true;
+  }, [searchCriteria, loading, allFlights, pairs, isRoundTrip]);
+
+  // Remember selections for this search while the user browses.
+  useEffect(() => {
+    if (!hydratedRef.current) return;
+    rememberFlowState(memoryKey, {
+      sortBy,
+      activeFilters,
+      phase,
+      selectedOutboundOfferId: selectedOutbound?.offerId ?? null,
+      selectedFlightId: selectedFlight?.id ?? null,
+    });
+  }, [memoryKey, sortBy, activeFilters, phase, selectedOutbound, selectedFlight]);
 
   // Return list for round-trip is deterministic once the outbound is picked:
   // it is exactly the inbound slice of the SAME Duffel offer.
@@ -280,7 +325,7 @@ export default function FlightListingPage() {
         {activeLoading && (
           <div className="flex items-center justify-center h-96">
             <div className="text-center">
-              <div className="animate-spin mb-4">
+              <div className="animate-pulse mb-4">
                 <span className="material-symbols-outlined text-4xl text-primary">flight_takeoff</span>
               </div>
               <p className="text-on-surface-variant font-label-sm">Loading flights...</p>
@@ -292,6 +337,7 @@ export default function FlightListingPage() {
         {!activeLoading && !activeError && (
           <>
             <FlightFilters
+              value={sortBy}
               onSortChange={handleSortChange}
               onFilterOpen={() => setIsFilterOpen(true)}
               activeFilterCount={activeFilterCount}
@@ -333,8 +379,8 @@ export default function FlightListingPage() {
                           <p className="font-label-md text-label-md text-primary">{selectedOutbound.airline}</p>
                           <p className="font-label-sm text-label-sm text-outline mt-0.5">
                             {selectedOutbound.departureTime} → {selectedOutbound.arrivalTime}
-                            {' · '}{formatDuration(selectedOutbound.duration)}
-                            {' · '}{getStopsLabel(selectedOutbound.stops)}
+                            <Sep />{formatDuration(selectedOutbound.duration)}
+                            <Sep />{getStopsLabel(selectedOutbound.stops)}
                           </p>
                         </div>
                       </div>

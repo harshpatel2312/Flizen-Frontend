@@ -153,7 +153,7 @@ export default function BookingPanel() {
         {/* From Airport */}
         <AirportAutocomplete
           label="From"
-          placeholder="Where from?"
+          placeholder="City or airport code (e.g. YYZ)"
           icon="flight_takeoff"
           value={fromAirport ? (fromAirport.city ? `${fromAirport.city} (${fromAirport.iata})` : fromAirport.iata) : ''}
           onChange={(text) => {
@@ -179,7 +179,7 @@ export default function BookingPanel() {
         {/* To Airport */}
         <AirportAutocomplete
           label="To"
-          placeholder="Where to?"
+          placeholder="City or airport code (e.g. ORD)"
           icon="flight_land"
           value={toAirport ? (toAirport.city ? `${toAirport.city} (${toAirport.iata})` : toAirport.iata) : ''}
           onChange={(text) => {
@@ -228,7 +228,7 @@ export default function BookingPanel() {
       </div>
 
       {/* Passengers & Class Section */}
-      <div className="grid grid-cols-2 gap-element-gap border-b border-[#2C2C2C] pb-4">
+      <div className="grid grid-cols-2 gap-element-gap">
         <PassengerSelector
           value={passengers}
           onChange={setPassengers}
@@ -261,7 +261,7 @@ export default function BookingPanel() {
         <button
           onClick={handleSearch}
           disabled={isLoading}
-          className="bg-primary text-on-primary font-label-md text-label-md font-bold py-3 rounded-full w-full hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          className="self-center px-10 bg-primary text-on-primary font-label-md text-label-md font-bold py-3 rounded-full hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
           {isLoading && (
             <span className="material-symbols-outlined animate-spin">

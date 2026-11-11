@@ -9,9 +9,11 @@ import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import SeatMap from '../components/SeatMap';
+import Sep from '../components/Sep';
 import { formatDuration } from '../utils/flightUtils';
 import { getAirport } from '../services/apiService';
 import { buildDraftPayload, createBookingDraft } from '../services/bookingService';
+import { offerMemoryKey, recallFlowState, rememberFlowState } from '../utils/bookingFlowMemory';
 
 // ─── Passenger colour palette (mirrors SeatMap.jsx) ──────────────────────────
 const P_COLORS = [
@@ -134,7 +136,7 @@ function SegmentStepper({ segments, activeIdx, selectedSeats, totalPassengers, c
                   isActive ? 'text-on-primary/60' : 'text-[#888]'
                 }`}>
                   {seg.directionLabel}
-                  {seg.totalInFlight > 1 && ` · Leg ${seg.segIndexInFlight + 1}`}
+                  {seg.totalInFlight > 1 && (<><Sep />Leg {seg.segIndexInFlight + 1}</>)}
                 </p>
               )}
               <p className={`font-label-md text-label-md leading-none ${
@@ -242,7 +244,7 @@ function SummaryPanel({
                   </div>
                   <p className="font-label-sm text-label-sm text-[#888] mb-3">
                     {seg.airline} {seg.flightNumber}
-                    {seg.departureTime !== '—' && ` · ${seg.departureTime}–${seg.arrivalTime}`}
+                    {seg.departureTime !== '—' && (<><Sep />{seg.departureTime}–{seg.arrivalTime}</>)}
                   </p>
 
                   {/* Per-passenger rows */}
@@ -339,7 +341,7 @@ function SummaryPanel({
             : 'text-outline hover:text-primary'
         }`}
       >
-        Skip seat selection · go to checkout
+        Skip seat selection<Sep />go to checkout
       </button>
 
       {checkoutError && (
@@ -366,9 +368,22 @@ export default function SeatSelectionPage() {
   const allSegments = flight ? buildAllSegments(flight, inboundFlight) : [];
 
   // selectedSeats: { [segmentKey]: Array(totalPassengers) of seat|null }
-  const [selectedSeats, setSelectedSeats] = useState(() =>
-    Object.fromEntries(allSegments.map((s) => [s.key, Array(totalPassengers).fill(null)]))
-  );
+  // Restored from flow memory (same offer + passenger count) after Back/Forward.
+  const offerKey = offerMemoryKey(flight);
+  const memoryKey = offerKey ? `seats:${offerKey}:${totalPassengers}` : null;
+  const [selectedSeats, setSelectedSeats] = useState(() => {
+    const remembered = recallFlowState(memoryKey) || {};
+    return Object.fromEntries(allSegments.map((s) => {
+      const prev = remembered[s.key];
+      return [s.key, Array.isArray(prev) && prev.length === totalPassengers
+        ? prev
+        : Array(totalPassengers).fill(null)];
+    }));
+  });
+
+  useEffect(() => {
+    rememberFlowState(memoryKey, selectedSeats);
+  }, [memoryKey, selectedSeats]);
 
   const [activeSegmentIdx, setActiveSegmentIdx] = useState(0);
   const [activePassenger, setActivePassenger]   = useState(0);
@@ -471,9 +486,9 @@ export default function SeatSelectionPage() {
           <h1 className="font-headline-lg text-headline-lg text-primary">Select Seats</h1>
           <p className="font-label-md text-label-md text-outline mt-1">
             {allSegments.length} flight{allSegments.length !== 1 ? 's' : ''}
-            {' · '}
+            <Sep />
             {totalPassengers} passenger{totalPassengers !== 1 ? 's' : ''}
-            {searchCriteria?.cabin_class && ` · ${searchCriteria.cabin_class}`}
+            {searchCriteria?.cabin_class && (<><Sep />{searchCriteria.cabin_class}</>)}
           </p>
         </div>
 
@@ -511,7 +526,7 @@ export default function SeatSelectionPage() {
                   Passenger {i + 1}
                   {seat && (
                     <span className={`text-[10px] font-semibold ${isActive ? 'text-on-primary/60' : 'text-[#444]'}`}>
-                      · {seat.id}
+                      <Sep />{seat.id}
                     </span>
                   )}
                 </button>
@@ -530,11 +545,11 @@ export default function SeatSelectionPage() {
             <span className="text-primary">
               {airportLabel(activeSegment?.origin, cityMap)} → {airportLabel(activeSegment?.destination, cityMap)}
             </span>
-            {' · '}
+            <Sep />
             <span className="text-[#555]">{activeSegment?.airline} {activeSegment?.flightNumber}</span>
             {currentSeats[activePassenger] && (
               <>
-                {' · Current: '}
+                <Sep />Current:{' '}
                 <span className="text-primary">{currentSeats[activePassenger].id}</span>
                 {' '}
                 <span className="text-[#444]">({getSeatTypeLabel(currentSeats[activePassenger].type)})</span>
@@ -553,7 +568,7 @@ export default function SeatSelectionPage() {
                 {activeSegment?.directionLabel && (
                   <span className="font-label-sm text-label-sm text-outline uppercase tracking-widest">
                     {activeSegment.directionLabel}
-                    {activeSegment.totalInFlight > 1 && ` · Leg ${activeSegment.segIndexInFlight + 1} of ${activeSegment.totalInFlight}`}
+                    {activeSegment.totalInFlight > 1 && (<><Sep />Leg {activeSegment.segIndexInFlight + 1} of {activeSegment.totalInFlight}</>)}
                   </span>
                 )}
                 <h2 className="font-headline-md text-headline-md text-primary mt-0.5">
@@ -561,10 +576,10 @@ export default function SeatSelectionPage() {
                 </h2>
                 <p className="font-label-md text-label-md text-outline mt-0.5">
                   {activeSegment?.airline} {activeSegment?.flightNumber}
-                  {activeSegment?.departureTime !== '—' && ` · ${activeSegment.departureTime}–${activeSegment.arrivalTime}`}
-                  {activeSegment?.duration && ` · ${formatDuration(activeSegment.duration)}`}
+                  {activeSegment?.departureTime !== '—' && (<><Sep />{activeSegment.departureTime}–{activeSegment.arrivalTime}</>)}
+                  {activeSegment?.duration && (<><Sep />{formatDuration(activeSegment.duration)}</>)}
                   {activeSegment?.aircraftName && (
-                    <span className="text-[#444]"> · {activeSegment.aircraftName}</span>
+                    <span className="text-[#444]"><Sep />{activeSegment.aircraftName}</span>
                   )}
                 </p>
               </div>

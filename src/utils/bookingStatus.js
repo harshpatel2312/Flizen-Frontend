@@ -41,8 +41,8 @@ export function displayFor(booking) {
     return {
       label:       'Payment pending',
       tone:        'gray',
-      headline:    'Waiting for payment',
-      description: 'Your payment has not been received yet. This page will update automatically.',
+      headline:    'Securing your booking',
+      description: 'We\u2019re confirming your payment and holding your seats. This usually takes just a few seconds.',
     };
   }
   if (s === STATUS.PAYMENT_RECEIVED) {

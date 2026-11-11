@@ -7,11 +7,12 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
+import Sep from '../components/Sep';
 import { formatPrice, formatDuration, getStopsLabel } from '../utils/flightUtils';
 import { buildDraftPayload, createBookingDraft } from '../services/bookingService';
 
 // ─── Mini flight row (used inside TripSummaryPanel) ──────────────────────────
-function FlightMiniCard({ flight, cityMap }) {
+function FlightMiniCard({ flight, cityMap, showPrice = true }) {
   if (!flight) return null;
   const fmtAirport = (code) => cityMap?.[code] || code || '—';
   return (
@@ -34,13 +35,15 @@ function FlightMiniCard({ flight, cityMap }) {
             {fmtAirport(flight.fromAirport)} → {fmtAirport(flight.toAirport)}
           </p>
           <p className="font-label-sm text-label-sm text-outline">
-            {flight.departureTime} – {flight.arrivalTime} · {formatDuration(flight.duration)} · {getStopsLabel(flight.stops)}
+            {flight.departureTime} – {flight.arrivalTime}<Sep />{formatDuration(flight.duration)}<Sep />{getStopsLabel(flight.stops)}
           </p>
         </div>
       </div>
-      <p className="font-label-md text-label-md text-primary flex-shrink-0">
-        {formatPrice(flight.price, flight.currency)}
-      </p>
+      {showPrice && (
+        <p className="font-label-md text-label-md text-primary flex-shrink-0">
+          {formatPrice(flight.price, flight.currency)}
+        </p>
+      )}
     </div>
   );
 }
@@ -122,14 +125,19 @@ function TripSummaryPanel({ flight, inboundFlight, searchCriteria }) {
     parseInt(searchCriteria?.passengers?.adults ?? 1) +
     parseInt(searchCriteria?.passengers?.children ?? 0);
 
-  const outboundPrice = parseFloat(flight?.price) || 0;
-  const inboundPrice  = parseFloat(inboundFlight?.price) || 0;
-  const totalPrice    = outboundPrice + inboundPrice;
-  const currency      = flight?.currency || 'USD';
+  // Duffel bundles round-trip as one offer with one total_amount; both legs carry the same whole-offer price.
+  const totalLabel = formatPrice(flight?.price, flight?.currency || 'USD');
 
   return (
     <div className="bg-[#1F1F1F] border border-[#2C2C2C] rounded-xl p-6 shadow-[0_0_32px_rgba(0,0,0,0.4)]">
-      <h2 className="font-headline-md text-headline-md text-primary mb-6">Trip Summary</h2>
+      <div className="flex items-start justify-between gap-3 mb-6">
+        <h2 className="font-headline-md text-headline-md text-primary">Trip Summary</h2>
+        <span className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#2C2C2C] text-primary font-label-sm text-label-sm">
+          <span className="material-symbols-outlined text-[14px] leading-none">person</span>
+          {totalPassengers}
+          {searchCriteria?.cabin_class && (<><Sep />{searchCriteria.cabin_class}</>)}
+        </span>
+      </div>
 
       {/* Departure flight */}
       {isRoundTrip && (
@@ -137,7 +145,7 @@ function TripSummaryPanel({ flight, inboundFlight, searchCriteria }) {
           Departure Flight
         </p>
       )}
-      <FlightMiniCard flight={flight} cityMap={cityMap} />
+      <FlightMiniCard flight={flight} cityMap={cityMap} showPrice={!isRoundTrip} />
 
       {/* Return flight */}
       {isRoundTrip && (
@@ -146,33 +154,21 @@ function TripSummaryPanel({ flight, inboundFlight, searchCriteria }) {
           <p className="font-label-sm text-label-sm text-outline uppercase tracking-widest mb-3">
             Return Flight
           </p>
-          <FlightMiniCard flight={inboundFlight} cityMap={cityMap} />
+          <FlightMiniCard flight={inboundFlight} cityMap={cityMap} showPrice={false} />
         </>
       )}
 
       {/* Price breakdown */}
-      <div className="mt-6 pt-5 border-t border-[#2C2C2C] space-y-2">
-        {isRoundTrip && (
-          <>
-            <div className="flex justify-between font-label-md text-label-md text-on-surface-variant">
-              <span>Departure</span>
-              <span>{formatPrice(flight.price, currency)}</span>
-            </div>
-            <div className="flex justify-between font-label-md text-label-md text-on-surface-variant">
-              <span>Return</span>
-              <span>{formatPrice(inboundFlight.price, inboundFlight.currency)}</span>
-            </div>
-            <div className="pt-2 border-t border-[#2C2C2C]" />
-          </>
-        )}
+      <div className="mt-6 pt-5 border-t border-[#2C2C2C] space-y-1">
         <div className="flex justify-between font-headline-md text-headline-md text-primary">
           <span>Total</span>
-          <span>{formatPrice(totalPrice.toFixed(2), currency)}</span>
+          <span>{totalLabel}</span>
         </div>
-        <p className="font-label-sm text-label-sm text-outline pt-1">
-          {totalPassengers} passenger{totalPassengers !== 1 ? 's' : ''}
-          {searchCriteria?.cabin_class ? ` · ${searchCriteria.cabin_class}` : ''}
-        </p>
+        {isRoundTrip && (
+          <p className="font-label-sm text-label-sm text-outline">
+            Bundled round-trip fare
+          </p>
+        )}
       </div>
     </div>
   );
@@ -297,7 +293,7 @@ export default function SeatSelectionChoicePage() {
             )}
 
             <p className="text-[11px] text-[#606060] leading-relaxed">
-              Seat selection is complimentary · Preferences are subject to availability
+              Seat selection is complimentary<Sep />Preferences are subject to availability
             </p>
           </div>
 
