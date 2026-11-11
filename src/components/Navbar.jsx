@@ -1,11 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { signOut } from '../services/authService';
 
 export default function Navbar() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const onTrips = pathname.startsWith('/trips');
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
 
@@ -36,9 +38,13 @@ export default function Navbar() {
       <div className="flex items-center gap-container-margin">
         <span className="text-2xl font-bold tracking-tighter text-white">Flizen</span>
         <div className="hidden md:flex gap-gutter items-center ml-8">
-          <a className="text-zinc-500 font-medium hover:text-white transition-colors duration-200" href="#">
+          <Link
+            to="/trips"
+            aria-current={onTrips ? 'page' : undefined}
+            className={`font-medium hover:text-white transition-colors duration-200 ${onTrips ? 'text-white' : 'text-zinc-500'}`}
+          >
             My Trips
-          </a>
+          </Link>
           <a className="text-zinc-500 font-medium hover:text-white transition-colors duration-200" href="#">
             Flight Status
           </a>

@@ -19,11 +19,18 @@ function formatDate(dateString) {
 
 function ShellHeader() {
   return (
-    <div className="px-4 py-3.5 border-b border-[#2C2C2C]">
+    <div className="px-4 py-3.5 border-b border-[#2C2C2C] flex items-center justify-between gap-3">
       <h3 className="font-label-lg text-label-lg text-white flex items-center gap-2">
         <span className="material-symbols-outlined">airplane_ticket</span>
         Recent Trips
       </h3>
+      <Link
+        to="/trips"
+        className="font-label-md text-label-md text-outline hover:text-primary transition-colors inline-flex items-center gap-1"
+      >
+        View all
+        <span className="material-symbols-outlined text-[16px] leading-none">chevron_right</span>
+      </Link>
     </div>
   );
 }
@@ -116,7 +123,7 @@ export default function FlightHistory() {
           return (
             <Link
               key={bk.booking_id}
-              to={`/booking/${encodeURIComponent(bk.booking_id)}`}
+              to={`/trips/${encodeURIComponent(bk.booking_id)}`}
               className="block px-4 py-3 border-b border-[#2C2C2C] hover:bg-[#1F1F1F] transition-colors cursor-pointer"
             >
               <div className="flex items-center gap-3">

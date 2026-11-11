@@ -13,6 +13,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import Navbar from '../components/Navbar';
+import CopyButton from '../components/CopyButton';
 import Sep from '../components/Sep';
 import { getAirport } from '../services/apiService';
 import { fetchBooking } from '../services/bookingService';
@@ -347,7 +348,7 @@ export default function BookingResultPage() {
                       </button>
                     )}
                     <Link
-                      to="/dashboard"
+                      to={isConfirmed ? `/trips/${encodeURIComponent(bookingId)}` : '/dashboard'}
                       className="px-6 py-3 rounded-full bg-primary text-on-primary font-label-md text-label-md font-bold hover:opacity-90 transition-opacity"
                     >
                       {isConfirmed ? 'View My Trips' : 'Back to dashboard'}
@@ -373,22 +374,6 @@ function SummaryCell({ label, children }) {
       </p>
       <div className="flex items-center gap-2 h-8 min-w-0">{children}</div>
     </div>
-  );
-}
-
-function CopyButton({ copied, label, onClick }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label={copied ? 'Copied' : `Copy ${label}`}
-      title={copied ? 'Copied' : `Copy ${label}`}
-      className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-full border border-[#2C2C2C] text-outline hover:text-primary hover:border-[#4A4A4A] transition-colors"
-    >
-      <span className="material-symbols-outlined text-[14px] leading-none">
-        {copied ? 'check' : 'content_copy'}
-      </span>
-    </button>
   );
 }
 
