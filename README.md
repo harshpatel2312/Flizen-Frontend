@@ -1,51 +1,69 @@
 # Flizen Frontend
 
-React frontend for the Flizen flight booking platform. Dark-mode UI styled with Tailwind CSS and Material Design 3 tokens.
+React frontend for the Flizen flight booking platform: flight search, passenger details, seat selection, Stripe checkout, and booking status. Dark-mode UI built with Tailwind CSS and Material Design 3 tokens.
+
+## Tech stack
+
+React 18, React Router 7, Vite 5, Tailwind CSS 3, Firebase Auth, Stripe Elements (`@stripe/react-stripe-js`), `libphonenumber-js`, `country-flag-icons`.
 
 ## Structure
 
 ```
 src/
-  main.jsx                          # App entry point, router setup
-  App.jsx                           # Dashboard page layout
-  index.css                         # Global styles, custom scrollbar classes
+  main.jsx                       # App entry point, router setup
+  App.jsx                        # Dashboard layout (search form + recent trips)
+  index.css                      # Global styles, custom scrollbar classes
   components/
-    Navbar.jsx                      # Top navigation bar
-    BookingPanel.jsx                # Flight search form (airports, dates, passengers, cabin class)
-    AirportAutocomplete.jsx         # Airport search with backend-backed suggestions
-    DatePickerField.jsx             # Calendar date picker with past-date validation
-    DatePickerDOB.jsx               # Date of birth picker (past dates only, for passenger form)
-    PassengerSelector.jsx           # Adults / children / infants selector
-    CabinClassSelector.jsx          # Economy / Premium Economy / Business / First dropdown
-    FlightListCard.jsx              # Single flight offer card on the listing page
-    FlightDetailsPanel.jsx          # Sticky side panel: segments, baggage, fare conditions, price
-    FlightFilters.jsx               # Sort pills + Filter button on the listing page
-    FlightFilterPanel.jsx           # Slide-in filter panel: stops, price, airlines, time, duration
-    RouteInfoHeader.jsx             # Route + date summary header on listing page
-    FlightHistory.jsx               # Recent trips card (dashboard — Firestore integration pending)
-    ProtectedRoute.jsx              # Auth guard — redirects unauthenticated users to /login
-    auth/
-      AuthInput.jsx                 # Shared dark-theme input field
-      AuthButton.jsx                # Shared white primary button
-      GoogleIcon.jsx                # Google brand SVG icon
+    Navbar.jsx                   # Top navigation bar
+    BookingPanel.jsx             # Flight search form (airports, dates, passengers, cabin class)
+    AirportAutocomplete.jsx      # Airport search with backend-backed suggestions
+    DatePickerField.jsx          # Calendar date picker with past-date validation
+    DatePickerDOB.jsx            # Date-of-birth picker (past dates only)
+    PassengerSelector.jsx        # Adults / children / infants selector
+    CabinClassSelector.jsx       # Economy / Premium Economy / Business / First
+    FlightListCard.jsx           # Flight offer card on the listing page
+    FlightDetailsPanel.jsx       # Sticky side panel: segments, baggage, fare conditions, total
+    FlightFilters.jsx            # Sort pills + Filter button
+    FlightFilterPanel.jsx        # Slide-in filters: stops, price, airlines, time, duration
+    RouteInfoHeader.jsx          # Route + date summary header
+    FlightHistory.jsx            # Recent trips on the dashboard (GET /api/bookings)
+    SeatMap.jsx                  # Visual seat map (local preferences only)
+    PhoneInput.jsx               # Phone field with searchable country-code picker
+    SearchableDropdown.jsx       # Capsule dropdown with search (e.g. Nationality)
+    Sep.jsx                      # Inline " | " separator
+    ProtectedRoute.jsx           # Auth guard, redirects signed-out users to /login
+    auth/                        # AuthInput, AuthButton, GoogleIcon
+  context/
+    AuthContext.jsx              # Firebase auth state
   pages/
-    LoginPage.jsx                   # / and /login routes — Google + email/password login
-    SignUpPage.jsx                  # /signup route — Google sign-up
-    FlightListingPage.jsx           # /flights route — list, filter, sort, and details panel
-    PassengerDetailsPage.jsx        # /passengers route — traveller info form
+    LoginPage.jsx                # / and /login
+    SignUpPage.jsx               # /signup
+    FlightListingPage.jsx        # /flights
+    PassengerDetailsPage.jsx     # /passengers
+    SeatSelectionChoicePage.jsx  # /seat-choice (pick seats or skip to checkout)
+    SeatSelectionPage.jsx        # /seats
+    PaymentPage.jsx              # /payment/:bookingId (Stripe Payment Element)
+    BookingResultPage.jsx        # /payment/:bookingId/processing and /booking/:bookingId
+    ProfilePage.jsx              # /profile
   services/
-    apiService.js                   # Airport search API calls
-    flightService.js                # Flight search API calls + data transformation
-    flightCache.js                  # In-memory Map cache for fetched flight results
-    firebase.js                     # Firebase app init (lazy, reads VITE_FIREBASE_* env vars)
-    authService.js                  # signInWithGoogle(), signOut() — wraps Firebase Auth
+    apiService.js                # Airport search / lookup
+    flightService.js             # Flight search + offer transformation
+    flightCache.js               # In-memory cache of search results
+    bookingService.js            # Booking drafts, booking list / detail
+    paymentService.js            # PaymentIntents, Stripe.js loader
+    profileService.js            # GET / PUT /profile
+    firebase.js                  # Firebase init (reads VITE_FIREBASE_* env vars)
+    authService.js               # signInWithGoogle(), signOut()
   utils/
-    flightUtils.js                  # Pure helpers: formatDuration, formatPrice, getStopsLabel, sortFlights, detectUserCurrency
-    searchParamUtils.js             # URL search param parsing
+    flightUtils.js               # formatDuration, formatPrice, getStopsLabel, sortFlights, detectUserCurrency
+    searchParamUtils.js          # URL search-param parsing
+    bookingStatus.js             # Booking status labels / tones shared by result page and history
+    bookingFlowMemory.js         # Short-lived Back/Forward memory for the booking flow
+    phone.js                     # Phone parsing, formatting, validation (libphonenumber-js)
   styles/
-    AirportAutocomplete.css         # Scrollbar + dropdown styles for airport input
+    AirportAutocomplete.css      # Dropdown + scrollbar styles
   data/
-    suggestedRoutes.js              # Static list of suggested routes (dashboard placeholder)
+    suggestedRoutes.js           # Static suggested routes
 ```
 
 ## Setup
@@ -54,216 +72,130 @@ src/
 npm install
 ```
 
-Create a `.env.local` file (never commit this):
+Create `.env.local` (gitignored, never commit it):
 
-```
-VITE_API_BASE_URL=http://localhost:8000
+| Variable                            | Purpose                                                 |
+|-------------------------------------|---------------------------------------------------------|
+| `VITE_API_BASE_URL`                 | Backend URL. Default `http://localhost:8000`.            |
+| `VITE_STRIPE_PUBLISHABLE_KEY`       | Stripe publishable key (`pk_test_...` locally).          |
+| `VITE_FIREBASE_API_KEY`             | Firebase Web SDK config (Firebase Console > Project Settings > Your apps > Web app). |
+| `VITE_FIREBASE_AUTH_DOMAIN`         | Firebase auth domain.                                    |
+| `VITE_FIREBASE_PROJECT_ID`          | Firebase project id.                                     |
+| `VITE_FIREBASE_STORAGE_BUCKET`      | Firebase storage bucket.                                 |
+| `VITE_FIREBASE_MESSAGING_SENDER_ID` | Firebase messaging sender id.                            |
+| `VITE_FIREBASE_APP_ID`              | Firebase web app id.                                     |
 
-# Firebase — get these from Firebase Console > Project Settings > Your apps > Web app
-VITE_FIREBASE_API_KEY=AIza...
-VITE_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
-VITE_FIREBASE_PROJECT_ID=your-project-id
-VITE_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
-VITE_FIREBASE_MESSAGING_SENDER_ID=123456789
-VITE_FIREBASE_APP_ID=1:123:web:abc
-```
-
-The app loads without Firebase config — Firebase is only required when the user clicks **Continue with Google**.
-
-## Running
-
-```bash
-npm run dev     # Development server at http://localhost:5173
-npm run build   # Production build
-npm run preview # Preview production build locally
-```
-
-## Pages and routing
-
-| Route          | Component              | Description                                                        |
-|----------------|------------------------|--------------------------------------------------------------------|
-| `/`            | `LoginPage`            | Login — entry point for all users                                  |
-| `/login`       | `LoginPage`            | Same as `/`                                                        |
-| `/signup`      | `SignUpPage`           | Sign-up with Google                                                |
-| `/dashboard`   | `App.jsx`              | Dashboard with booking form and flight history                     |
-| `/flights`     | `FlightListingPage`    | Flight results, sort, filter panel, and details side panel         |
-| `/passengers`  | `PassengerDetailsPage` | Passenger details form before booking confirmation                 |
-
-## Authentication flow
-
-1. User lands on `/` (`LoginPage`) and clicks **Continue with Google**.
-2. `authService.signInWithGoogle()` opens a Firebase Google popup — credentials never touch Flizen servers.
-3. Firebase returns a short-lived ID token. The frontend POSTs it to `POST /auth/verify` on the backend.
-4. The backend verifies the token using Firebase Admin SDK (cryptographic check, no DB call) and returns `{ uid, email, name, picture }`.
-5. On success the user is redirected to `/dashboard`.
-
-Firebase config is read from `VITE_FIREBASE_*` env vars at runtime. Raw Firebase error codes are never surfaced to the user — they are mapped to safe, user-friendly messages in `authService.js`.
-
-Email / password sign-in fields are present in the UI but intentionally disabled (marked "Coming soon"). When implemented they must use `firebase/auth` `signInWithEmailAndPassword` — credentials must never be sent directly to the backend.
-
-## Flight search flow
-
-1. User fills in the booking form on the dashboard (`BookingPanel`) — airports, date, passengers, cabin class.
-2. On submit, the form validates input, saves state to `sessionStorage` (`flizen_last_search`), and navigates to `/flights?from=...&to=...&departureDate=...&adults=...&cabinClass=...`.
-3. `FlightListingPage` reads URL params, checks the in-memory flight cache (`flightCache.js`), and if stale calls `GET /api/flights/search` on the backend.
-4. Results are rendered as `FlightListCard` items. The **Filter** button opens `FlightFilterPanel` — a slide-in panel that filters by stops, price, airlines, departure time slot, and duration. Sort pills (Best / Cheapest / Fastest) reorder the displayed list without re-fetching.
-5. Selecting a card opens `FlightDetailsPanel` — a sticky side panel showing segments, layovers, baggage allowance, CO2 estimate, passport-at-booking requirement, fare conditions, and total price.
-6. Clicking **Continue Booking** navigates to `/passengers` with the selected flight and search criteria passed via router state.
-7. `PassengerDetailsPage` collects traveller details (name, DOB, gender, nationality, and optionally passport details when `passportRequired` is true) plus contact info. All fields are validated on blur with ICAO and regex rules and again on submit.
-
-## Search state persistence
-
-When navigating back to the dashboard from `/flights`, the booking form is pre-populated from `sessionStorage`. This lets users adjust a single field without re-entering everything. The cache is cleared via the **Back to Home** link.
-
-## Currency handling
-
-`detectUserCurrency()` in `flightUtils.js` reads `navigator.language`, extracts the region tag (e.g. `CA` from `en-CA`), and maps it to an ISO 4217 currency code. The result is sent as a `currency` query parameter to the backend which passes it to Duffel. Falls back to `USD` if the locale is unrecognised.
-
-## Filter panel
-
-`FlightFilterPanel` is a client-side filter — no additional API calls are made. It operates on the already-fetched `allFlights` array. Filters are applied via `useMemo` in `FlightListingPage` and are reset when a new search is performed.
-
-## Design notes
-
-- Theme: dark `bg-[#121212]` / `bg-[#1F1F1F]` cards, `border-[#2C2C2C]` dividers.
-- Typography: Material Design 3 type tokens via Tailwind (`font-headline-md`, `font-label-sm`, etc.).
-- Icons: Google Material Symbols (`material-symbols-outlined` class).
-- Custom scrollbar style (thin, `#2C2C2C` thumb) defined in `index.css` and `AirportAutocomplete.css`.
-
-
-## Setup
-
-```bash
-npm install
-```
-
-Create a `.env.local` file (never commit this):
-
-```
-VITE_API_BASE_URL=http://localhost:8000
-
-# Firebase — get these from Firebase Console → Project Settings → Your apps → Web app
-VITE_FIREBASE_API_KEY=AIza...
-VITE_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
-VITE_FIREBASE_PROJECT_ID=your-project-id
-VITE_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
-VITE_FIREBASE_MESSAGING_SENDER_ID=123456789
-VITE_FIREBASE_APP_ID=1:123:web:abc
-```
-
-The app loads without Firebase config — the config is only required when the user clicks "Continue with Google".
+The app loads without Firebase config; Firebase is only required when the user clicks **Continue with Google**.
 
 ## Running
 
 ```bash
-npm run dev    # Development server at http://localhost:5173
-npm run build  # Production build
-npm run preview # Preview production build locally
+npm run dev       # Dev server at http://localhost:3000 (opens the browser)
+npm run build     # Production build to dist/
+npm run preview   # Preview the production build
+npm run lint      # ESLint
 ```
+
+The dev port is set in `vite.config.js`. The backend must be running, and for payments to complete locally the Stripe CLI must forward webhooks to it (see the backend README).
 
 ## Pages and routing
 
-| Route        | Component           | Description                                                |
-|--------------|---------------------|---------------------------------------------------------|
-| `/`          | `LoginPage`         | Login — entry point for all users                         |
-| `/login`     | `LoginPage`         | Same as `/`                                               |
-| `/signup`    | `SignUpPage`        | Sign-up with Google                                       |
-| `/dashboard` | `App.jsx`           | Dashboard with booking form and widgets                   |
-| `/flights`   | `FlightListingPage` | Flight results, sorting, and details panel                |
+| Route                           | Component                 | Description                                              |
+|---------------------------------|---------------------------|----------------------------------------------------------|
+| `/`, `/login`                   | `LoginPage`               | Login (Google)                                           |
+| `/signup`                       | `SignUpPage`              | Sign-up with Google                                      |
+| `/dashboard`                    | `App.jsx`                 | Search form and recent trips                             |
+| `/flights`                      | `FlightListingPage`       | Results, sort, filters, details panel                    |
+| `/passengers`                   | `PassengerDetailsPage`    | Traveller and contact details                            |
+| `/seat-choice`                  | `SeatSelectionChoicePage` | Choose seats or skip to checkout                         |
+| `/seats`                        | `SeatSelectionPage`       | Seat map per flight segment                              |
+| `/payment/:bookingId`           | `PaymentPage`             | Stripe Payment Element and order summary                 |
+| `/payment/:bookingId/processing`| `BookingResultPage`       | Stripe return URL; live booking status                   |
+| `/booking/:bookingId`           | `BookingResultPage`       | Booking status from the trips list                       |
+| `/profile`                      | `ProfilePage`             | Personal, contact, passport, and travel preferences      |
+
+All routes except `/`, `/login`, and `/signup` are wrapped in `ProtectedRoute`.
 
 ## Authentication flow
 
-1. User lands on `/` (LoginPage) and clicks **Continue with Google**.
-2. `authService.signInWithGoogle()` opens a Firebase Google popup — credentials never touch Flizen servers.
-3. Firebase returns a short-lived ID token. The frontend POSTs it to `POST /auth/verify` on the backend.
-4. The backend verifies the token using Firebase Admin SDK (cryptographic check, no DB call) and returns `{ uid, email, name, picture }`.
-5. On success the user is redirected to `/dashboard`.
+1. User clicks **Continue with Google** on `/`.
+2. `authService.signInWithGoogle()` opens a Firebase Google popup; credentials never touch Flizen servers.
+3. The frontend sends the Firebase ID token to `POST /auth/verify`, which returns `{ uid, email, name, picture }`.
+4. On success the user is redirected to `/dashboard`. API calls send the ID token as `Authorization: Bearer <token>`.
 
-Firebase config is read from `VITE_FIREBASE_*` env vars at runtime. Raw Firebase error codes are never surfaced to the user — they are mapped to safe, user-friendly messages in `authService.js`.
+Raw Firebase error codes are mapped to user-friendly messages in `authService.js`. Email / password fields are present but disabled ("Coming soon"); when implemented they must use `signInWithEmailAndPassword`, never send credentials to the backend.
 
-Email / password sign-in fields are present in the UI but intentionally disabled (marked "Coming soon"). When implemented they must use `firebase/auth` `signInWithEmailAndPassword` — credentials must never be sent directly to the backend.
+## Booking flow
 
-## Flight search flow
+1. **Search:** `BookingPanel` validates the form, saves it to `sessionStorage` (`flizen_last_search`), and navigates to `/flights?from=...&to=...&departureDate=...&adults=...&cabinClass=...&tripType=...` (plus `returnDate` for round trips).
+2. **Results:** `FlightListingPage` uses the in-memory cache (`flightCache.js`) or calls `GET /api/flights/search`. Sort pills and `FlightFilterPanel` work client-side without re-fetching. Round trips are picked in two steps (outbound, then return) from the same Duffel offer.
+3. **Passengers:** name, date of birth, gender, nationality, passport details when required, and contact email + phone. The primary traveller is pre-filled from the saved profile.
+4. **Seats:** pick seats on `/seats` or skip to checkout.
+5. **Checkout:** `POST /api/bookings/draft` creates the booking (server-side price), then `/payment/:bookingId` mounts Stripe Elements against `POST /api/payments/intents`.
+6. **Result:** Stripe redirects to `/payment/:bookingId/processing`, which polls `GET /api/bookings/:id` every 2.5 s until the status settles.
 
-1. User fills in the booking form on the dashboard (`BookingPanel`).
-2. On submit, the form validates input, saves the form state to `sessionStorage` (`flizen_last_search`), and navigates to `/flights?origin=...&destination=...&...`.
-3. `FlightListingPage` reads the URL params, calls `GET /api/flights/search` on the backend, and renders results via `FlightListCard`.
-4. Selecting a card opens `FlightDetailsPanel` — a sticky side panel showing segments, layovers, baggage, fare conditions, and price.
-5. The **Continue** button in the panel initiates the booking handoff (not yet wired to a booking flow).
+### Booking result page
 
-## Search state persistence
+- Trip summary with airports shown as `City (CODE)`.
+- While processing: a three-step tracker (payment received, confirming with airline, ticket issued).
+- Summary card with **Airline Reference** (shown only once the booking is `confirmed`), **Booking ID**, and **Amount**. The Booking ID is shortened to its first 8 characters; its copy button copies the full ID.
+- Confirmed bookings show **View My Trips**. Failed payments show **Try again**.
 
-When a user navigates back to the dashboard from `/flights`, the booking form is pre-populated from `sessionStorage`. This allows the user to adjust a single field without re-entering everything. The saved state is cleared when the browser session closes.
+### Round-trip pricing
 
+Duffel prices a round trip as one bundled offer, so the UI shows a single total with a "Bundled round-trip fare" note rather than adding up departure and return prices.
+
+### Seat selection limitation
+
+The seat map is a local visual mock. Picks are saved with the booking as preferences (`confirmed_with_duffel: false`) and are never sent to Duffel; airlines assign real seats at check-in.
+
+## Form inputs
+
+### Phone number (`PhoneInput`)
+
+- Searchable country-code picker showing flag, country name, and dial code. Search by name, code (`+44`), or ISO code (`FR`).
+- The number formats as you type in the selected country's style, e.g. `(548) 333-3136` for +1 or `20 7946 0018` for +44. The placeholder shows a sample number for that country.
+- Pasting a full international number (e.g. `+33 6 12 34 56 78`) switches the country automatically.
+- The default country comes from the browser locale, falling back to US.
+- Values are stored as E.164 (`+15483333136`). `phoneError()` checks that the number is real for its country, so numbers the airline would reject are caught before payment.
+- Flags are SVGs from `country-flag-icons` (Windows does not render flag emoji). `vite.config.js` keeps them as separate files so only flags on screen are downloaded.
+
+### Nationality (`SearchableDropdown`)
+
+Nationality on the passenger details and profile pages uses a searchable dropdown: best matches first, Enter selects the top result, Escape closes.
+
+## State persistence
+
+- **Search form:** pre-filled from `sessionStorage` when returning to the dashboard. The flight cache is cleared via **Back to Home**.
+- **Booking flow (Back / Forward):** `bookingFlowMemory.js` remembers flight-list sort, filters and selected flight, passenger and contact details, and selected seats.
+  - Stored in `sessionStorage` only (this tab), expires after 30 minutes, and is keyed by search / offer so a new search starts fresh.
+  - Cleared on sign-out.
+  - Never used on payment pages and never stores payment data.
 
 ## Currency handling
 
-`detectUserCurrency()` in `flightUtils.js` reads `navigator.language`, extracts the region tag (e.g. `CA` from `en-CA`), and maps it to an ISO 4217 currency code. The result is sent as a `currency` query parameter to the backend, which passes it to Duffel. Duffel then returns offer prices in that currency. Supported currencies are those accepted by the Duffel API. Falls back to `USD` if the locale is unrecognised or unsupported.
+`detectUserCurrency()` reads `navigator.language`, maps the region (e.g. `CA` from `en-CA`) to an ISO 4217 code, and sends it as `currency` to the backend, which passes it to Duffel. Falls back to `USD`.
 
 ## Design notes
 
-- Theme: dark `bg-[#121212]` / `bg-[#1F1F1F]` cards, `border-[#2C2C2C]` dividers.
-- Typography: Material Design 3 type tokens via Tailwind (`font-headline-md`, `font-label-sm`, etc.).
-- Icons: Google Material Symbols (`material-symbols-outlined` class).
-- Custom scrollbar style (thin, white-30% thumb) defined in `index.css` and `AirportAutocomplete.css`, applied to dropdown lists and `FlightDetailsPanel`.
- 
- 
----
+- Theme: dark `bg-[#121212]` / `bg-[#1F1F1F]` surfaces, `border-[#2C2C2C]` dividers, pill-shaped (`rounded-full`) inputs and buttons.
+- Typography: Plus Jakarta Sans with Material Design 3 type tokens via Tailwind (`font-headline-md`, `font-label-sm`, etc.).
+- Icons: Google Material Symbols (`material-symbols-outlined`).
+- The Stripe Payment Element is themed to match (fonts, pill inputs, tabs, dropdowns) in `PaymentPage.jsx`.
+- Custom thin scrollbar in `index.css` and `AirportAutocomplete.css`.
 
-## Payment & Booking Setup
+## Testing payments locally
 
-### Required environment variables (`.env.local`)
-
-| Variable                              | Purpose                                             |
-|---------------------------------------|-----------------------------------------------------|
-| `VITE_API_BASE_URL`                 | Flizen backend URL (dev: `http://localhost:8000`).|
-| `VITE_STRIPE_PUBLISHABLE_KEY`       | Stripe publishable key (`pk_test_...` locally).   |
-| `VITE_FIREBASE_API_KEY`             | Firebase Web SDK config.                            |
-| `VITE_FIREBASE_AUTH_DOMAIN`         | Firebase auth domain.                               |
-| `VITE_FIREBASE_PROJECT_ID`          | Firebase project id.                                |
-| `VITE_FIREBASE_STORAGE_BUCKET`      | Firebase storage bucket.                            |
-| `VITE_FIREBASE_MESSAGING_SENDER_ID` | Firebase messaging sender id.                       |
-| `VITE_FIREBASE_APP_ID`              | Firebase web app id.                                |
-| `VITE_GOOGLE_MAPS_API_KEY`          | Optional � Google Maps for airport picker.          |
-
-`.env.local` is gitignored. Never commit it.
-
-### Stripe test setup
-
-Use the publishable **test** key (`pk_test_...`). Enter test card `4242 4242 4242 4242` on the payment page; expiry any future date, any CVC. Card `4000 0027 6000 3184` triggers 3D-Secure, which uses the `return_url` `/payment/:bookingId/processing`.
-
-### Duffel test setup
-
-The backend performs all Duffel API calls; the frontend only displays the offers it returns. No frontend-side Duffel key is needed. Just make sure the backend has `DUFFEL_ACCESS_TOKEN=duffel_test_...`.
-
-### Payment / booking status flow
-
-1. User completes passenger details -> `POST /api/bookings/draft` (one Duffel offer id, server-authoritative price).
-2. `/payment/:bookingId` mounts Stripe Elements against `POST /api/payments/intents`.
-3. Stripe redirects to `/payment/:bookingId/processing` (or `/booking/:bookingId`).
-4. The result page polls `GET /api/bookings/:id` every 2.5s until status becomes terminal.
-5. The airline booking reference is shown **only** after status = `confirmed`.
-
-### Seat-selection limitation
-
-The seat map is a local visual mock. Picks are stored server-side as UI preferences with `confirmed_with_duffel: false` and are never sent to Duffel. Airlines will assign real seats at check-in until a Duffel seat-map integration is added.
-
-### Local dev commands
-
-`ash
-npm install
-npm run dev       # http://localhost:5173
-npm run build     # production bundle
-npm run lint      # eslint
-`
+- Use the Stripe **test** publishable key. Test card `4242 4242 4242 4242`, any future expiry, any CVC.
+- `4000 0027 6000 3184` triggers 3D Secure and exercises the return-URL path.
+- The backend handles all Duffel calls; no frontend Duffel key is needed.
 
 No frontend unit-test suite is configured yet.
 
-### Production deployment checklist
+## Production deployment checklist
 
-1. Set `VITE_API_BASE_URL` to the HTTPS backend URL, `VITE_STRIPE_PUBLISHABLE_KEY` to the live `pk_live_...` key.
-2. Use the **live** Firebase web config (from a production project distinct from test).
-3. Serve behind HTTPS. Vite build output is fully static (`dist/`).
+1. Set `VITE_API_BASE_URL` to the HTTPS backend URL and `VITE_STRIPE_PUBLISHABLE_KEY` to the live `pk_live_...` key.
+2. Use the production Firebase web config.
+3. Serve `dist/` over HTTPS (the build is fully static).
 4. Add the production origin to the backend's `CORS_ORIGINS` and to Firebase Auth authorised domains.
-5. Verify Stripe redirect URLs (`FRONTEND_URL` on the backend) match the deployed origin.
-6. Purge any built bundles from before switching to production keys � publishable keys are baked into `dist/` at build time.
+5. Rebuild after switching keys; publishable keys are baked into `dist/` at build time.
