@@ -12,6 +12,9 @@ import AirportAutocomplete from '../components/AirportAutocomplete';
 import DatePickerDOB from '../components/DatePickerDOB';
 import { useAuth } from '../context/AuthContext';
 import { fetchProfile, saveProfile } from '../services/profileService';
+import PhoneInput from '../components/PhoneInput';
+import SearchableDropdown from '../components/SearchableDropdown';
+import { phoneError, toE164 } from '../utils/phone';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Page-local reusable primitives (same style as PassengerDetailsPage)
@@ -116,9 +119,9 @@ function CapsuleDropdown({ label, error, options, placeholder, value, onChange }
                 <button
                   key={val}
                   onClick={() => { onChange(val); setIsOpen(false); }}
-                  className="w-full px-4 py-3 text-left hover:bg-[#2C2C2C] transition-colors border-b border-[#2C2C2C] last:border-b-0 font-body-md text-primary"
+                  className="group w-full px-4 py-3 text-left hover:bg-[#2C2C2C] transition-colors border-b border-[#2C2C2C] last:border-b-0 font-body-md text-primary"
                 >
-                  {lbl}
+                  <span className="group-hover:text-secondary transition-colors">{lbl}</span>
                 </button>
               );
             })}
@@ -267,9 +270,8 @@ export default function ProfilePage() {
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(contact.email.trim())) {
       e.email = 'Invalid email address';
     }
-    if (contact.phone.trim() && !/^\+?[\d\s\-().]{7,20}$/.test(contact.phone.trim())) {
-      e.phone = 'Invalid phone number';
-    }
+    const phoneErr = phoneError(contact.phone, { required: false });
+    if (phoneErr) e.phone = phoneErr;
     if (passport.number.trim() && !/^[A-Z0-9]{6,9}$/.test(passport.number)) {
       e.passportNumber = '6–9 uppercase letters & digits';
     }
@@ -295,7 +297,7 @@ export default function ProfilePage() {
     try {
       await saveProfile(user, {
         personal,
-        contact,
+        contact: { ...contact, phone: toE164(contact.phone) },
         preferences: prefs,
         passport,
       });
@@ -405,9 +407,10 @@ export default function ProfilePage() {
             </div>
 
             <div className="grid grid-cols-2 gap-element-gap">
-              <CapsuleDropdown
+              <SearchableDropdown
                 label="Nationality"
                 placeholder="Select nationality"
+                searchPlaceholder="Search country"
                 options={COUNTRIES}
                 value={personal.nationality}
                 onChange={(val) => setP('nationality', val)}
@@ -426,12 +429,9 @@ export default function ProfilePage() {
                 onChange={(e) => setC('email', e.target.value)}
                 error={errors.email}
               />
-              <CapsuleInput
-                label="Phone Number"
-                type="tel"
-                placeholder="+1 555 000 0000"
+              <PhoneInput
                 value={contact.phone}
-                onChange={(e) => setC('phone', e.target.value.replace(/[^0-9+\-\s().]/g, '').slice(0, 20))}
+                onChange={(val) => setC('phone', val)}
                 error={errors.phone}
               />
             </div>

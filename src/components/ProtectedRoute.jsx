@@ -17,7 +17,7 @@ export default function ProtectedRoute({ children }) {
     return (
       <div className="dark bg-background min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <span className="material-symbols-outlined text-5xl text-primary animate-spin">
+          <span className="material-symbols-outlined text-5xl text-primary animate-pulse">
             flight_takeoff
           </span>
           <p className="text-on-surface-variant font-label-sm text-label-sm">

@@ -5,6 +5,7 @@
 
 import { signInWithPopup, signOut as firebaseSignOut } from 'firebase/auth';
 import { getFirebaseAuth, googleProvider } from './firebase';
+import { clearFlowMemory } from '../utils/bookingFlowMemory';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
@@ -66,5 +67,6 @@ async function verifyTokenWithBackend(idToken) {
  * Sign out from Firebase.
  */
 export async function signOut() {
+  clearFlowMemory();
   await firebaseSignOut(getFirebaseAuth());
 }

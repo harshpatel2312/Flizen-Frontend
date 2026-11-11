@@ -1,4 +1,5 @@
 import { formatDuration, formatPrice, getStopsLabel } from '../utils/flightUtils';
+import Sep from './Sep';
 
 export default function FlightDetailsPanel({ flight, inboundFlight, searchCriteria, cityMap: propCityMap, onContinue, ctaLabel = 'Continue Booking' }) {
   if (!flight) {
@@ -24,17 +25,20 @@ export default function FlightDetailsPanel({ flight, inboundFlight, searchCriter
     ...(searchCriteria?.to_airport && searchCriteria?.toCity ? { [searchCriteria.to_airport]: searchCriteria.toCity } : {}),
   };
 
-  // Combined price for round trip
-  const outboundPrice = parseFloat(flight.price) || 0;
-  const inboundPrice  = parseFloat(inboundFlight?.price) || 0;
-  const totalPrice    = outboundPrice + inboundPrice;
-  const currency      = flight.currency || inboundFlight?.currency || 'USD';
-  const totalPriceLabel = formatPrice(totalPrice.toFixed(2), currency);
+  // Duffel bundles round-trip as one offer with one total_amount; both legs carry the same whole-offer price.
+  const priceLabel = formatPrice(flight.price, flight.currency);
 
   return (
     <div className="lg:sticky lg:top-24">
       <div className="bg-[#1F1F1F] border border-[#2C2C2C] rounded-xl p-6 shadow-[0_0_32px_rgba(0,0,0,0.4)] max-h-[calc(100vh-7rem)] overflow-y-auto flight-details-scroll">
-        <h2 className="font-headline-md text-headline-md text-primary mb-6">Flight Details</h2>
+        <div className="flex items-start justify-between gap-3 mb-6">
+          <h2 className="font-headline-md text-headline-md text-primary">Flight Details</h2>
+          <span className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#2C2C2C] text-primary font-label-sm text-label-sm">
+            <span className="material-symbols-outlined text-[14px] leading-none">person</span>
+            {totalPassengers}
+            {searchCriteria?.cabin_class && (<><Sep />{searchCriteria.cabin_class}</>)}
+          </span>
+        </div>
 
         {/* ── Outbound flight block ── */}
         {isRoundTrip && (
@@ -56,24 +60,22 @@ export default function FlightDetailsPanel({ flight, inboundFlight, searchCriter
         )}
 
         {/* ── Price ── */}
-        <div className="mt-6 pt-6 border-t border-[#2C2C2C] space-y-2">
-          {isRoundTrip && (
-            <>
-              <Row label="Departure" value={formatPrice(flight.price, flight.currency)} />
-              <Row label="Return"    value={formatPrice(inboundFlight.price, inboundFlight.currency)} />
-              <div className="pt-2 border-t border-[#2C2C2C]" />
-            </>
-          )}
+        <div className="mt-6 pt-6 border-t border-[#2C2C2C] space-y-1">
           <div className="flex justify-between font-headline-md text-headline-md text-primary">
-            <span>{isRoundTrip ? 'Total' : 'Price'}</span>
-            <span>{isRoundTrip ? totalPriceLabel : formatPrice(flight.price, flight.currency)}</span>
+            <span>Total</span>
+            <span>{priceLabel}</span>
           </div>
+          {isRoundTrip && (
+            <p className="font-label-sm text-label-sm text-outline">
+              Bundled round-trip fare
+            </p>
+          )}
         </div>
 
         {/* ── CTA ── */}
         <button
           onClick={() => onContinue?.(flight)}
-          className="w-full mt-6 bg-primary text-on-primary font-label-md text-label-md font-bold py-3 rounded-full hover:opacity-90 transition-opacity"
+          className="block mx-auto mt-6 px-10 bg-primary text-on-primary font-label-md text-label-md font-bold py-3 rounded-full hover:opacity-90 transition-opacity"
         >
           {ctaLabel}
         </button>
@@ -110,10 +112,10 @@ function FlightBlock({ flight, totalPassengers, cityMap }) {
         </div>
         <p className="text-outline font-label-sm text-label-sm">
           {flight.airline}
-          {flight.flightNumber ? ` · ${flight.flightNumber}` : ''}
+          {flight.flightNumber && (<><Sep />{flight.flightNumber}</>)}
         </p>
         <p className="text-outline font-label-sm text-label-sm mt-1">
-          {flight.departureTime} – {flight.arrivalTime} · {durationLabel} · {stopsLabel}
+          {flight.departureTime} – {flight.arrivalTime}<Sep />{durationLabel}<Sep />{stopsLabel}
         </p>
         <div className="flex flex-wrap gap-2 mt-3">
           {flight.cabinClass && (

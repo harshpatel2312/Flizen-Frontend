@@ -185,20 +185,6 @@ export default function SeatMap({ passengers, selectedSeats, onSeatSelect, activ
       {/* Single centered column — everything shares one alignment axis */}
       <div className="flex flex-col items-center">
 
-        {/* ── Aircraft nose ── */}
-        <div className="flex flex-col items-center mb-6">
-          <svg width="56" height="28" viewBox="0 0 56 28" fill="none">
-            <path
-              d="M28 2 C14 2, 3 14, 3 27 L53 27 C53 14, 42 2, 28 2 Z"
-              fill="#1A1A1A"
-              stroke="#3C3C3C"
-              strokeWidth="1.5"
-            />
-            <line x1="3" y1="27" x2="53" y2="27" stroke="#3C3C3C" strokeWidth="1.5" />
-          </svg>
-          <span className="text-[9px] text-[#606060] tracking-[0.3em] uppercase mt-1">nose</span>
-        </div>
-
         {/* ── Legend ── */}
         <div className="flex flex-wrap gap-x-4 gap-y-2 justify-center mb-6">
           <LegendItem label="Available" bg="#1A1A1A" border="#505050" />
@@ -208,10 +194,27 @@ export default function SeatMap({ passengers, selectedSeats, onSeatSelect, activ
         <LegendItem label="Premium" bg="#0C1020" border="#2A3A72" dot="#4A62B8" />
         </div>
 
-        {/* ── Aircraft body: col headers + seat rows ── */}
+        {/* ── Aircraft body: nose + col headers + seat rows + tail ── */}
         {/* This div sizes itself to its content (the seat grid).
             Section dividers inside use flex-1 lines which fill exactly this width. */}
         <div>
+          {/* Nose — same gutter as seat rows so it centers on the seat columns */}
+          <div className="flex items-center gap-1 mb-6">
+            <div className="w-7 mr-1 flex-shrink-0" />
+            <div className="flex-1 flex flex-col items-center">
+              <svg width="56" height="28" viewBox="0 0 56 28" fill="none">
+                <path
+                  d="M28 2 C14 2, 3 14, 3 27 L53 27 C53 14, 42 2, 28 2 Z"
+                  fill="#1A1A1A"
+                  stroke="#3C3C3C"
+                  strokeWidth="1.5"
+                />
+                <line x1="3" y1="27" x2="53" y2="27" stroke="#3C3C3C" strokeWidth="1.5" />
+              </svg>
+              <span className="text-[9px] text-[#606060] tracking-[0.3em] uppercase mt-1">nose</span>
+            </div>
+          </div>
+
           {/* Column header row — spacer mimics the row-number prefix in each seat row */}
           <div className="flex items-center gap-1 mb-2">
             <div className="w-7 mr-1 flex-shrink-0" /> {/* row-number spacer */}
@@ -314,19 +317,21 @@ export default function SeatMap({ passengers, selectedSeats, onSeatSelect, activ
               );
             })}
           </div>
-        </div>
-
-        {/* ── Tail ── */}
-        <div className="flex flex-col items-center mt-6">
-          <span className="text-[9px] text-[#606060] tracking-[0.3em] uppercase mb-1">tail</span>
-          <svg width="56" height="20" viewBox="0 0 56 20" fill="none">
-            <path
-              d="M3 2 L53 2 C53 14, 42 18, 28 18 C14 18, 3 14, 3 2 Z"
-              fill="#1A1A1A"
-              stroke="#3C3C3C"
-              strokeWidth="1.5"
-            />
-          </svg>
+          {/* Tail — same gutter as seat rows so it centers on the seat columns */}
+          <div className="flex items-center gap-1 mt-6">
+            <div className="w-7 mr-1 flex-shrink-0" />
+            <div className="flex-1 flex flex-col items-center">
+              <span className="text-[9px] text-[#606060] tracking-[0.3em] uppercase mb-1">tail</span>
+              <svg width="56" height="20" viewBox="0 0 56 20" fill="none">
+                <path
+                  d="M3 2 L53 2 C53 14, 42 18, 28 18 C14 18, 3 14, 3 2 Z"
+                  fill="#1A1A1A"
+                  stroke="#3C3C3C"
+                  strokeWidth="1.5"
+                />
+              </svg>
+            </div>
+          </div>
         </div>
 
       </div>

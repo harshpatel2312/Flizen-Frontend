@@ -1,4 +1,5 @@
 import { formatDuration, formatPrice, getStopsLabel } from '../utils/flightUtils';
+import Sep from './Sep';
 
 export default function FlightListCard({ flight, isSelected, onClick, cityMap }) {
   const fmtAirport = (code) => {
@@ -43,16 +44,20 @@ export default function FlightListCard({ flight, isSelected, onClick, cityMap })
           <div>
             <p className="font-label-md text-label-md text-primary">{flight.airline}</p>
             <p className="font-label-sm text-label-sm text-outline">
-              {subParts.join(' • ')}
+              {subParts.map((p, i) => (
+                <span key={i}>{i > 0 && <Sep />}{p}</span>
+              ))}
             </p>
           </div>
         </div>
 
         <div className="text-right">
           <p className="font-headline-md text-headline-md text-primary">{priceLabel}</p>
-          {flight.fareBrandName && flight.cabinClass && (
+          {(flight.sliceCount ?? 1) > 1 ? (
+            <p className="font-label-sm text-label-sm text-outline mt-0.5">Round-trip total</p>
+          ) : flight.fareBrandName && flight.cabinClass ? (
             <p className="font-label-sm text-label-sm text-outline mt-0.5">{flight.fareBrandName}</p>
-          )}
+          ) : null}
         </div>
       </div>
 

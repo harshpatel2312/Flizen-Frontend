@@ -12,6 +12,10 @@ import FlightDetailsPanel from '../components/FlightDetailsPanel';
 import DatePickerDOB from '../components/DatePickerDOB';
 import { useAuth } from '../context/AuthContext';
 import { fetchProfile } from '../services/profileService';
+import { offerMemoryKey, recallFlowState, rememberFlowState } from '../utils/bookingFlowMemory';
+import PhoneInput from '../components/PhoneInput';
+import SearchableDropdown from '../components/SearchableDropdown';
+import { phoneError } from '../utils/phone';
 import '../styles/AirportAutocomplete.css';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -83,9 +87,9 @@ function CapsuleDropdown({ label, error, options, placeholder, value, onChange }
                 <button
                   key={val}
                   onClick={() => { onChange(val); setIsOpen(false); }}
-                  className="w-full px-4 py-3 text-left hover:bg-[#2C2C2C] transition-colors border-b border-[#2C2C2C] last:border-b-0 font-body-md text-primary"
+                  className="group w-full px-4 py-3 text-left hover:bg-[#2C2C2C] transition-colors border-b border-[#2C2C2C] last:border-b-0 font-body-md text-primary group-hover:text-secondary"
                 >
-                  {lbl}
+                  <span className="group-hover:text-secondary transition-colors">{lbl}</span>
                 </button>
               );
             })}
@@ -170,25 +174,6 @@ function PassportExpiryInput({ value, onChange, onBlur, error }) {
   );
 }
 
-function PhoneInput({ value, onChange, onBlur, error }) {
-  const handleChange = (e) => {
-    const filtered = e.target.value.replace(/[^0-9+\-\s().]/g, '').slice(0, 20);
-    onChange(filtered);
-  };
-  return (
-    <CapsuleInput
-      label="Phone Number"
-      type="tel"
-      placeholder="+1 (555) 000-0000"
-      value={value}
-      onChange={handleChange}
-      onBlur={onBlur}
-      error={error}
-      inputMode="tel"
-    />
-  );
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Dropdown option lists
 // ─────────────────────────────────────────────────────────────────────────────
@@ -264,9 +249,10 @@ function TravelerForm({ globalNum, type, data, errors, onChange, onBlur, passpor
           onChange={(val) => onChange('gender', val)}
           error={errors.gender}
         />
-        <CapsuleDropdown
+        <SearchableDropdown
           label="Nationality"
           placeholder="Select country"
+          searchPlaceholder="Search country"
           options={COUNTRIES}
           value={data.nationality}
           onChange={(val) => onChange('nationality', val)}
@@ -310,6 +296,10 @@ export default function PassengerDetailsPage() {
 
   const { flight, inboundFlight, searchCriteria, backUrl, passengers: savedPassengers, contact: savedContact } = location.state || {};
 
+  const offerKey = offerMemoryKey(flight);
+  const memoryKey = offerKey ? `passengers:${offerKey}` : null;
+  const [remembered] = useState(() => recallFlowState(memoryKey));
+
   // Build ordered traveler list from search criteria counts
   const travelers = (() => {
     const a = parseInt(searchCriteria?.passengers?.adults   ?? 1);
@@ -333,22 +323,30 @@ export default function PassengerDetailsPage() {
     passportExpiry:         '',
   });
 
-  const [passengers, setPassengers] = useState(() =>
-    savedPassengers?.length === travelers.length
-      ? savedPassengers
-      : travelers.map((_, i) => blankPassenger(i === 0))
-  );
+  const [passengers, setPassengers] = useState(() => {
+    if (savedPassengers?.length === travelers.length) return savedPassengers;
+    if (remembered?.passengers?.length === travelers.length) return remembered.passengers;
+    return travelers.map((_, i) => blankPassenger(i === 0));
+  });
   const [contact, setContact] = useState(
-    savedContact ?? { email: user?.email || '', phone: '' }
+    savedContact ?? remembered?.contact ?? { email: user?.email || '', phone: '' }
   );
   const [errors, setErrors] = useState([]);
   const [contactErrors, setContactErrors] = useState({});
+  const isRestored =
+    savedPassengers?.length === travelers.length ||
+    remembered?.passengers?.length === travelers.length;
+
+  // Remember what's been entered so browser Back/Forward doesn't wipe the form.
+  useEffect(() => {
+    rememberFlowState(memoryKey, { passengers, contact });
+  }, [memoryKey, passengers, contact]);
 
   // ── pre-populate primary passenger from saved profile ──────────────────────
   // Skip if we're restoring data from a back-navigation (savedPassengers already filled)
   useEffect(() => {
     if (!user) return;
-    if (savedPassengers?.length === travelers.length) return; // already restored
+    if (isRestored) return; // already restored
     fetchProfile(user)
       .then((profile) => {
         if (!profile) return;
@@ -425,7 +423,7 @@ export default function PassengerDetailsPage() {
       if (!val.trim()) error = 'Required';
       else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(val.trim())) error = 'Invalid email address';
     } else if (field === 'phone') {
-      if (val.trim() && !/^\+?[\d\s\-().]{7,20}$/.test(val.trim())) error = 'Invalid phone number';
+      error = phoneError(val);
     }
     if (error !== undefined) {
       setContactErrors((prev) => ({ ...prev, [field]: error }));
@@ -465,9 +463,8 @@ export default function PassengerDetailsPage() {
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(contact.email.trim())) {
       cErrs.email = 'Invalid email address';
     }
-    if (contact.phone.trim() && !/^\+?[\d\s\-().]{7,20}$/.test(contact.phone.trim())) {
-      cErrs.phone = 'Invalid phone number';
-    }
+    const phoneErr = phoneError(contact.phone);
+    if (phoneErr) cErrs.phone = phoneErr;
     setErrors(pErrs);
     setContactErrors(cErrs);
     return pErrs.every((e) => Object.keys(e).length === 0) && Object.keys(cErrs).length === 0;

@@ -55,7 +55,7 @@ export default function FlightHistory() {
     return (
       <section className="bg-[#121212] rounded-xl border border-[#2C2C2C] h-[500px] flex items-center justify-center">
         <div className="text-center flex flex-col items-center gap-4 px-6">
-          <div className="animate-spin">
+          <div className="animate-pulse">
             <span className="material-symbols-outlined text-5xl text-primary block">
               flight_takeoff
             </span>

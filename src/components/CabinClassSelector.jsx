@@ -107,7 +107,7 @@ export default function CabinClassSelector({
               key={cabin.id}
               onClick={() => handleSelect(cabin)}
               className={`
-                w-full p-2 rounded-full mb-1.5 last:mb-0 text-left transition-colors
+                group w-full p-2 rounded-full mb-1.5 last:mb-0 text-left transition-colors
                 ${selected === cabin.name
                   ? 'bg-white border border-white'
                   : 'hover:bg-[#2C2C2C] border border-[#2C2C2C]'
@@ -116,21 +116,21 @@ export default function CabinClassSelector({
             >
               <div className="flex items-start gap-3">
                 <span className={`
-                  material-symbols-outlined mt-0.5 flex-shrink-0
-                  ${selected === cabin.name ? 'text-black' : 'text-white'}
+                  material-symbols-outlined mt-0.5 flex-shrink-0 transition-colors
+                  ${selected === cabin.name ? 'text-black' : 'text-white group-hover:text-secondary'}
                 `}>
                   {cabin.icon}
                 </span>
                 <div className="flex-1 min-w-0">
                   <div className={`
-                    font-label-md
-                    ${selected === cabin.name ? 'text-black' : 'text-primary'}
+                    font-label-md transition-colors
+                    ${selected === cabin.name ? 'text-black' : 'text-primary group-hover:text-secondary'}
                   `}>
                     {cabin.name}
                   </div>
                   <div className={`
-                    font-label-sm text-sm
-                    ${selected === cabin.name ? 'text-black opacity-80' : 'text-outline'}
+                    font-label-sm text-sm transition-colors
+                    ${selected === cabin.name ? 'text-black opacity-80' : 'text-outline group-hover:text-secondary'}
                   `}>
                     {cabin.description}
                   </div>
