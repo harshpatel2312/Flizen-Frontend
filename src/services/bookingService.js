@@ -114,3 +114,16 @@ export async function listBookings() {
   if (!res.ok) throw new Error(await readError(res, 'Could not load your trips.'));
   return res.json();
 }
+
+/**
+ * GET /api/bookings/:id/details — owner-only trip view for My Trips:
+ * itinerary, traveller names, and payment history (no Stripe ids or secrets).
+ */
+export async function fetchBookingDetails(bookingId) {
+  const res = await fetch(`${API_BASE}/api/bookings/${encodeURIComponent(bookingId)}/details`, {
+    headers: await authHeaders(),
+  });
+  if (res.status === 404) throw new Error('This trip could not be found.');
+  if (!res.ok) throw new Error(await readError(res, 'Could not load trip details.'));
+  return res.json();
+}

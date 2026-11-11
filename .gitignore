@@ -8,15 +8,34 @@ pnpm-debug.log
 dist
 .vite
 
-# Local env files
+# Logs
+logs
+*.log
+
+# Test / lint caches
+coverage
+.eslintcache
+
+# Local env files (keep .env.example committed)
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
+
+# Secrets and credentials
+*-firebase-adminsdk-*.json
+serviceAccount*.json
+*.pem
+*.key
+
+# Firebase CLI (.firebaserc is safe to commit)
+.firebase
 
 # Editor directories and files
 .vscode
 .idea
 .DS_Store
+Thumbs.db
+desktop.ini
 *.suo
 *.ntvs*
 *.njsproj

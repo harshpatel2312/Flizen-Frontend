@@ -26,13 +26,17 @@ src/
     FlightFilters.jsx            # Sort pills + Filter button
     FlightFilterPanel.jsx        # Slide-in filters: stops, price, airlines, time, duration
     RouteInfoHeader.jsx          # Route + date summary header
-    FlightHistory.jsx            # Recent trips on the dashboard (GET /api/bookings)
+    FlightHistory.jsx            # Recent trips on the dashboard (GET /api/bookings), links to My Trips
     SeatMap.jsx                  # Visual seat map (local preferences only)
     PhoneInput.jsx               # Phone field with searchable country-code picker
     SearchableDropdown.jsx       # Capsule dropdown with search (e.g. Nationality)
+    CopyButton.jsx               # Round copy-to-clipboard button
     Sep.jsx                      # Inline " | " separator
     ProtectedRoute.jsx           # Auth guard, redirects signed-out users to /login
     auth/                        # AuthInput, AuthButton, GoogleIcon
+    trips/
+      TripCard.jsx               # One booking in the My Trips list
+      TripDetailsPanel.jsx       # Itinerary, travellers, payments, activity for one trip
   context/
     AuthContext.jsx              # Firebase auth state
   pages/
@@ -44,12 +48,13 @@ src/
     SeatSelectionPage.jsx        # /seats
     PaymentPage.jsx              # /payment/:bookingId (Stripe Payment Element)
     BookingResultPage.jsx        # /payment/:bookingId/processing and /booking/:bookingId
+    MyTripsPage.jsx              # /trips and /trips/:bookingId
     ProfilePage.jsx              # /profile
   services/
     apiService.js                # Airport search / lookup
     flightService.js             # Flight search + offer transformation
     flightCache.js               # In-memory cache of search results
-    bookingService.js            # Booking drafts, booking list / detail
+    bookingService.js            # Booking drafts, booking list, summary, trip details
     paymentService.js            # PaymentIntents, Stripe.js loader
     profileService.js            # GET / PUT /profile
     firebase.js                  # Firebase init (reads VITE_FIREBASE_* env vars)
@@ -57,7 +62,8 @@ src/
   utils/
     flightUtils.js               # formatDuration, formatPrice, getStopsLabel, sortFlights, detectUserCurrency
     searchParamUtils.js          # URL search-param parsing
-    bookingStatus.js             # Booking status labels / tones shared by result page and history
+    bookingStatus.js             # Booking status labels / tones shared by result page, history, My Trips
+    trips.js                     # My Trips grouping (upcoming / pending / ...), local date formatting
     bookingFlowMemory.js         # Short-lived Back/Forward memory for the booking flow
     phone.js                     # Phone parsing, formatting, validation (libphonenumber-js)
   styles/
@@ -111,7 +117,8 @@ The dev port is set in `vite.config.js`. The backend must be running, and for pa
 | `/seats`                        | `SeatSelectionPage`       | Seat map per flight segment                              |
 | `/payment/:bookingId`           | `PaymentPage`             | Stripe Payment Element and order summary                 |
 | `/payment/:bookingId/processing`| `BookingResultPage`       | Stripe return URL; live booking status                   |
-| `/booking/:bookingId`           | `BookingResultPage`       | Booking status from the trips list                       |
+| `/booking/:bookingId`           | `BookingResultPage`       | Live booking status                                      |
+| `/trips`, `/trips/:bookingId`   | `MyTripsPage`             | My Trips: all bookings and the selected trip's details   |
 | `/profile`                      | `ProfilePage`             | Personal, contact, passport, and travel preferences      |
 
 All routes except `/`, `/login`, and `/signup` are wrapped in `ProtectedRoute`.
@@ -139,7 +146,7 @@ Raw Firebase error codes are mapped to user-friendly messages in `authService.js
 - Trip summary with airports shown as `City (CODE)`.
 - While processing: a three-step tracker (payment received, confirming with airline, ticket issued).
 - Summary card with **Airline Reference** (shown only once the booking is `confirmed`), **Booking ID**, and **Amount**. The Booking ID is shortened to its first 8 characters; its copy button copies the full ID.
-- Confirmed bookings show **View My Trips**. Failed payments show **Try again**.
+- Confirmed bookings show **View My Trips** (opens the trip in My Trips). Failed payments show **Try again**.
 
 ### Round-trip pricing
 
@@ -148,6 +155,34 @@ Duffel prices a round trip as one bundled offer, so the UI shows a single total 
 ### Seat selection limitation
 
 The seat map is a local visual mock. Picks are saved with the booking as preferences (`confirmed_with_duffel: false`) and are never sent to Duffel; airlines assign real seats at check-in.
+
+## My Trips
+
+`/trips` lists every booking of the signed-in user; `/trips/:bookingId` opens one in the details panel (on mobile the details replace the list, and **All trips** goes back). Reachable from **My Trips** in the navbar, **View all** on the dashboard's Recent Trips, and **View My Trips** on the booking result page.
+
+**Tabs** (counts shown on each), defined in `utils/trips.js`:
+
+| Tab        | Bookings                                                                                    |
+|------------|---------------------------------------------------------------------------------------------|
+| Upcoming   | Confirmed, last flight date today or later (soonest first)                                  |
+| Pending    | Awaiting payment (fare still valid), declined but retryable, being confirmed, refund needs attention |
+| Completed  | Confirmed, last flight date in the past                                                     |
+| Cancelled  | Cancelled payments, declined payments whose fare expired                                     |
+| Refunded   | Refunded, or refund in progress                                                             |
+
+**All** groups them into *In progress*, *Upcoming*, and *Past & closed*. Unpaid checkouts whose fare expired are hidden; they were never purchases.
+
+**Trip card:** airline, one way / round trip, travellers, route with dates, status, airline reference (once confirmed), booking date, and amount.
+
+**Details panel** (`GET /api/bookings/:id/details`):
+- Status, route, dates, travellers; an explanation for non-confirmed states.
+- Airline Reference (only once Duffel confirms) and a shortened Booking ID, both copyable.
+- Itinerary per slice and segment: times (airport-local), flight number, airline, operating carrier, aircraft, cabin, durations, layovers, +1 day arrivals. Bookings made before itineraries were stored fall back to the route summary.
+- Payment: total, status, paid / refunded amounts and dates, and every payment attempt (e.g. a declined card followed by a successful one). No card data is shown or stored.
+- Activity timeline and an action when relevant: **Complete payment**, **Try payment again**, **View live status**, or **Search flights again**.
+- While a booking is being confirmed or refunded, the panel refreshes every 5 s (up to 2 minutes) and updates the list.
+
+States: skeleton loading, empty ("No trips yet" + Search flights), per-tab empty messages, and error with **Try again** (list and details separately).
 
 ## Form inputs
 
