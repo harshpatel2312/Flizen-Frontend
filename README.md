@@ -21,10 +21,14 @@ src/
     DatePickerDOB.jsx            # Date-of-birth picker (past dates only)
     PassengerSelector.jsx        # Adults / children / infants selector
     CabinClassSelector.jsx       # Economy / Premium Economy / Business / First
+    FlightCard.jsx               # Shared flight card + timeline (listing page and My Trips)
     FlightListCard.jsx           # Flight offer card on the listing page
     FlightDetailsPanel.jsx       # Sticky side panel: segments, baggage, fare conditions, total
     FlightFilters.jsx            # Sort pills + Filter button
     FlightFilterPanel.jsx        # Slide-in filters: stops, price, airlines, time, duration
+    SideDrawer.jsx               # Shared right-side drawer (filters, trip details)
+    AirlineLogo.jsx              # Airline logo with CDN / icon fallbacks
+    AIAssistantWorkspace.jsx     # Reserved, intentionally empty My Trips column for the AI assistant
     RouteInfoHeader.jsx          # Route + date summary header
     FlightHistory.jsx            # Recent trips on the dashboard (GET /api/bookings), links to My Trips
     SeatMap.jsx                  # Visual seat map (local preferences only)
@@ -36,7 +40,8 @@ src/
     auth/                        # AuthInput, AuthButton, GoogleIcon
     trips/
       TripCard.jsx               # One booking in the My Trips list
-      TripDetailsPanel.jsx       # Itinerary, travellers, payments, activity for one trip
+      TripDetailsDrawer.jsx      # Trip Details drawer: loading, polling, error states
+      TripDetailsSections.jsx    # Drawer sections: references, itinerary, seats, payment, ...
   context/
     AuthContext.jsx              # Firebase auth state
   pages/
@@ -158,7 +163,7 @@ The seat map is a local visual mock. Picks are saved with the booking as prefere
 
 ## My Trips
 
-`/trips` lists every booking of the signed-in user; `/trips/:bookingId` opens one in the details panel (on mobile the details replace the list, and **All trips** goes back). Reachable from **My Trips** in the navbar, **View all** on the dashboard's Recent Trips, and **View My Trips** on the booking result page.
+`/trips` lists every booking of the signed-in user; `/trips/:bookingId` opens one in the Trip Details drawer. Reachable from **My Trips** in the navbar, **View all** on the dashboard's Recent Trips, and **View My Trips** on the booking result page.
 
 **Tabs** (counts shown on each), defined in `utils/trips.js`:
 
@@ -170,19 +175,23 @@ The seat map is a local visual mock. Picks are saved with the booking as prefere
 | Cancelled  | Cancelled payments, declined payments whose fare expired                                     |
 | Refunded   | Refunded, or refund in progress                                                             |
 
-**All** groups them into *In progress*, *Upcoming*, and *Past & closed*. Unpaid checkouts whose fare expired are hidden; they were never purchases.
+**All** lists them in this order: in progress, upcoming, then past & closed. Unpaid checkouts whose fare expired are hidden; they were never purchases.
 
-**Trip card:** airline, one way / round trip, travellers, route with dates, status, airline reference (once confirmed), booking date, and amount.
+**Trip card:** the shared `FlightCard` (same as Find Your Flights) with status, travel dates, booking date, airline reference (once confirmed), and amount.
 
-**Details panel** (`GET /api/bookings/:id/details`):
-- Status, route, dates, travellers; an explanation for non-confirmed states.
-- Airline Reference (only once Duffel confirms) and a shortened Booking ID, both copyable.
-- Itinerary per slice and segment: times (airport-local), flight number, airline, operating carrier, aircraft, cabin, durations, layovers, +1 day arrivals. Bookings made before itineraries were stored fall back to the route summary.
-- Payment: total, status, paid / refunded amounts and dates, and every payment attempt (e.g. a declined card followed by a successful one). No card data is shown or stored.
-- Activity timeline and an action when relevant: **Complete payment**, **Try payment again**, **View live status**, or **Search flights again**.
-- While a booking is being confirmed or refunded, the panel refreshes every 5 s (up to 2 minutes) and updates the list.
+**Trip Details drawer** (`TripDetailsDrawer`, `GET /api/bookings/:id/details`) opens over the page in the shared `SideDrawer` (same slide-in and backdrop blur as the flight filters; half the screen on desktop, three quarters on tablets, full width on phones). Closes on the X, Escape, a backdrop click, or browser Back; page scrolling is locked while open and the list keeps its scroll position. Sections, in order:
+- Overview: status, route, trip type, dates, travellers, booking date; an explanation for non-confirmed states. Shown beside the airline booking reference(s) on wide screens.
+- Airline booking reference(s) with airline and copy button (only once Duffel confirms).
+- Itinerary per flight and segment, as a departure → arrival timeline: airline logo, flight number, cabin, aircraft, operating carrier, airport-local times with full dates, airport names, terminals, durations, and layovers.
+- Travellers, seats & baggage: names, types, and e-ticket numbers; a one-line summary when every traveller has the same bags on every flight and no seats are assigned, otherwise a flight-by-traveller table (seats only when assigned by the airline).
+- Payment summary: base fare / taxes / extras (only when they add up to the amount charged), total, status, payment date, refunds and remaining balance, and every payment attempt. No card data is shown or stored.
+- Manage booking (beside payment on wide screens): airline fare rules for refunds and changes, the airline's conditions of carriage, and **Complete payment**, **Try payment again**, **View live status**, or **Search flights again** when relevant.
+- Booking activity and additional information (booking ID, Duffel order ID, timestamps), collapsed by default.
+- While a booking is being confirmed or refunded, the drawer refreshes every 5 s (up to 2 minutes) and updates the list.
 
-States: skeleton loading, empty ("No trips yet" + Search flights), per-tab empty messages, and error with **Try again** (list and details separately).
+The right-hand column is `AIAssistantWorkspace`: intentionally empty space reserved for the upcoming AI assistant.
+
+States: skeleton loading, empty ("No trips yet" + Search flights), per-tab empty messages, error with **Try again** (list and details separately), and an expired-session prompt to sign in again.
 
 ## Form inputs
 

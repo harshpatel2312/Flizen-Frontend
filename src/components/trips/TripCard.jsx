@@ -1,19 +1,23 @@
 // src/components/trips/TripCard.jsx
-// One booking in the My Trips list: route, dates, airline, travellers,
-// status, airline reference, and amount. Selecting it opens the details panel.
+// One booking in the My Trips list, drawn with the same FlightCard as Find
+// Your Flights. Booking extras: status top-right, travel dates under each
+// airport, and a footer with the airline reference, booking date, and any hint.
+// Selecting it opens the details panel.
 
 import { pillClassFor, STATUS } from '../../utils/bookingStatus';
-import { formatPrice } from '../../utils/flightUtils';
+import { formatDuration, formatPrice, getStopsLabel } from '../../utils/flightUtils';
 import {
+  formatLocalTime,
   formatTimestamp,
   formatTripDate,
   isOfferExpired,
-  tripDates,
+  tripAirline,
+  tripLegs,
   tripStatus,
 } from '../../utils/trips';
-import Sep from '../Sep';
+import FlightCard, { FlightCardFooterItem, FlightTimeline } from '../FlightCard';
 
-/** Short status-specific hint shown under the route for trips that need attention. */
+/** Short status-specific hint for trips that need attention. */
 function hintFor(booking) {
   const s = booking.status;
   if (s === STATUS.DRAFT) {
@@ -36,109 +40,108 @@ function hintFor(booking) {
   return null;
 }
 
+const fullDate = (value) => formatTripDate(value, { weekday: true, withYear: true });
+
+/** Bold italic "#" for the airline reference, in the footer icons' grey. */
+function ReferenceIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="w-[18px] h-[18px] shrink-0" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" aria-hidden="true">
+      <path d="M10.5 3.5 7.5 20.5M17 3.5 14 20.5M4.5 8.75h16M3.5 15.25h16" />
+    </svg>
+  );
+}
+const place = (code, city) => (city && city !== code ? `${city} (${code})` : code || '—');
+
+/** Timeline props for one leg. Bookings without a stored schedule show airports and date only. */
+function legTimeline(leg) {
+  if (!leg.hasSchedule) {
+    return {
+      departure: { time: leg.origin || '—', place: leg.originCity || '', date: fullDate(leg.departingAt) || '\u00A0' },
+      arrival: { time: leg.destination || '—', place: leg.destinationCity || '', date: '\u00A0' },
+      duration: null,
+      stopsLabel: '',
+    };
+  }
+  const stops = leg.stops ?? 0;
+  return {
+    departure: { time: formatLocalTime(leg.departingAt), place: place(leg.origin, leg.originCity), date: fullDate(leg.departingAt) },
+    arrival: {
+      time: formatLocalTime(leg.arrivingAt),
+      place: place(leg.destination, leg.destinationCity),
+      date: fullDate(leg.arrivingAt),
+    },
+    duration: leg.duration ? formatDuration(leg.duration) : null,
+    stopsLabel: stops > 0 && leg.stopCodes.length
+      ? `${getStopsLabel(stops)} · ${leg.stopCodes.join(', ')}`
+      : getStopsLabel(stops),
+  };
+}
+
 export default function TripCard({ booking, cityMap, isSelected, onSelect }) {
-  const fs = booking.flight_summary || {};
-  const { depart, ret } = tripDates(booking);
-  const isRoundTrip = Boolean(fs.is_round_trip);
+  const legs = tripLegs(booking, cityMap);
+  const airline = tripAirline(booking);
+  const isRoundTrip = legs.length > 1 || Boolean(booking.flight_summary?.is_round_trip);
   const status = tripStatus(booking);
   const hint = hintFor(booking);
-  const showRef = booking.status === STATUS.CONFIRMED && booking.duffel_booking_reference;
+  const reference = booking.status === STATUS.CONFIRMED ? booking.duffel_booking_reference : null;
+  const bookedOn = booking.created_at && formatTripDate(new Date(booking.created_at), { weekday: false });
   const pax = booking.passenger_count || 0;
-  const city = (code) => cityMap?.[code] || code || '—';
+
+  // One-way flight numbers sit under the airline name; round trips label each leg instead.
+  const subParts = [
+    !isRoundTrip ? legs[0]?.flightNumbers?.join(', ') : null,
+    isRoundTrip ? 'Round trip' : 'One way',
+    pax > 0 ? `${pax} traveller${pax === 1 ? '' : 's'}` : null,
+  ].filter(Boolean);
+
+  const aside = (
+    <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${pillClassFor(status.tone)}`}>
+      {status.label}
+    </span>
+  );
+  const price = (
+    <p className="font-headline-md text-headline-md text-primary whitespace-nowrap">
+      {formatPrice(booking.amount, booking.currency)}
+    </p>
+  );
+
+  const footerItems = [
+    bookedOn && <FlightCardFooterItem key="booked" icon="event">Booked {bookedOn}</FlightCardFooterItem>,
+    reference && (
+      <FlightCardFooterItem
+        key="ref"
+        icon={<ReferenceIcon />}
+      >
+        <span className="text-primary tracking-wider" title="Airline reference">
+          <span className="sr-only">Airline reference </span>{reference}
+        </span>
+      </FlightCardFooterItem>
+    ),
+    hint && <FlightCardFooterItem key="hint" icon={hint.icon}>{hint.text}</FlightCardFooterItem>,
+  ].filter(Boolean);
 
   return (
-    <button
+    <FlightCard
+      as="button"
       type="button"
-      onClick={() => onSelect(booking.booking_id)}
       aria-pressed={isSelected}
-      className={`w-full text-left rounded-xl p-5 sm:p-6 relative overflow-hidden transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white ${
-        isSelected
-          ? 'bg-[#121212] border-l-4 border-l-primary border border-primary'
-          : 'bg-[#121212] border border-[#2C2C2C] hover:bg-[#1a1a1a]'
-      }`}
+      airline={airline.name || 'Airline'}
+      airlineLogo={airline.logoUrl}
+      airlineCode={airline.iataCode}
+      subParts={subParts}
+      aside={aside}
+      price={price}
+      isSelected={isSelected}
+      onClick={() => onSelect(booking.booking_id)}
+      footer={footerItems.length ? footerItems : null}
     >
-      {/* Airline + status */}
-      <div className="flex items-start justify-between gap-3 mb-5">
-        <div className="flex items-center gap-3 min-w-0">
-          {fs.airline_logo_url ? (
-            <img
-              src={fs.airline_logo_url}
-              alt=""
-              className="w-8 h-8 rounded-full object-contain bg-[#1F1F1F] flex-shrink-0"
-            />
-          ) : (
-            <div className="w-8 h-8 rounded-full bg-surface-container-high flex items-center justify-center flex-shrink-0">
-              <span className="material-symbols-outlined text-primary text-sm">flight</span>
-            </div>
-          )}
-          <div className="min-w-0">
-            <p className="font-label-md text-label-md text-primary truncate">{fs.airline || 'Airline'}</p>
-            <p className="font-label-sm text-label-sm text-outline">
-              {isRoundTrip ? 'Round trip' : 'One way'}
-              {pax > 0 && (<><Sep />{pax} traveller{pax === 1 ? '' : 's'}</>)}
-            </p>
-          </div>
-        </div>
-        <span className={`flex-shrink-0 px-3 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${pillClassFor(status.tone)}`}>
-          {status.label}
-        </span>
-      </div>
-
-      {/* Route */}
-      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-        <div className="min-w-0">
-          <p className="font-headline-md text-headline-md text-primary truncate">{city(fs.from_airport)}</p>
-          <p className="font-label-sm text-label-sm text-outline whitespace-nowrap">
-            {fs.from_airport || '—'}
-            {depart && (<><Sep />{formatTripDate(depart, { withYear: false, weekday: false })}</>)}
-          </p>
-        </div>
-        <div className="flex flex-col items-center gap-1 w-14 sm:w-24" aria-hidden="true">
-          <span className="material-symbols-outlined text-[18px] text-outline">
-            {isRoundTrip ? 'sync_alt' : 'flight'}
-          </span>
-          <div className="w-full flex items-center">
-            <div className="w-1.5 h-1.5 rounded-full bg-outline shrink-0" />
-            <div className="flex-1 h-px bg-[#2C2C2C]" />
-            <div className="w-1.5 h-1.5 rounded-full bg-outline shrink-0" />
-          </div>
-        </div>
-        <div className="min-w-0 text-right">
-          <p className="font-headline-md text-headline-md text-primary truncate">{city(fs.to_airport)}</p>
-          <p className="font-label-sm text-label-sm text-outline whitespace-nowrap">
-            {fs.to_airport || '—'}
-            {ret && (<><Sep />Return {formatTripDate(ret, { withYear: false, weekday: false })}</>)}
-          </p>
-        </div>
-      </div>
-
-      {hint && (
-        <p className="mt-4 flex items-center gap-2 font-label-sm text-label-sm text-on-surface-variant">
-          <span className="material-symbols-outlined text-[16px] leading-none text-outline" aria-hidden="true">
-            {hint.icon}
-          </span>
-          {hint.text}
-        </p>
+      {legs.length > 0 ? (
+        legs.map((leg, i) => (
+          <FlightTimeline key={i} {...legTimeline(leg)} label={leg.label} className={i === 0 ? 'mt-6' : 'mt-5'} />
+        ))
+      ) : (
+        <p className="mt-6 font-label-md text-label-md text-on-surface-variant">Flight details unavailable</p>
       )}
-
-      {/* Footer */}
-      <div className="mt-4 pt-4 border-t border-[#2C2C2C] flex items-center justify-between gap-3">
-        <div className="flex items-center gap-x-4 gap-y-1 flex-wrap font-label-sm text-label-sm text-outline min-w-0">
-          {showRef ? (
-            <span className="inline-flex items-center gap-1">
-              <span className="material-symbols-outlined text-[16px] leading-none" aria-hidden="true">confirmation_number</span>
-              Airline ref
-              <span className="text-primary tracking-wider">{booking.duffel_booking_reference}</span>
-            </span>
-          ) : null}
-          {booking.created_at && (
-            <span>Booked {formatTripDate(new Date(booking.created_at), { weekday: false })}</span>
-          )}
-        </div>
-        <p className="font-label-md text-label-md text-primary whitespace-nowrap">
-          {formatPrice(booking.amount, booking.currency)}
-        </p>
-      </div>
-    </button>
+    </FlightCard>
   );
 }

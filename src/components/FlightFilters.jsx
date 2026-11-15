@@ -1,3 +1,5 @@
+import { pillClass } from '../utils/pillStyles';
+
 export default function FlightFilters({ value = 'best', onSortChange, onFilterOpen, activeFilterCount = 0 }) {
   // Controlled by the parent so restored / reset sorts are reflected here.
   const activeSort = value;
@@ -12,12 +14,7 @@ export default function FlightFilters({ value = 'best', onSortChange, onFilterOp
     onSortChange?.(sortId);
   };
 
-  const pill = (active) =>
-    `font-label-md text-label-md px-4 py-2 rounded-full transition-colors border whitespace-nowrap ${
-      active
-        ? 'bg-[#1F1F1F] text-primary border-primary'
-        : 'bg-[#121212] text-on-surface-variant hover:bg-surface-variant border-[#2C2C2C]'
-    }`;
+  const pill = (active) => pillClass(active);
 
   return (
     <div className="flex items-center justify-between mb-6 gap-4">
@@ -33,11 +30,7 @@ export default function FlightFilters({ value = 'best', onSortChange, onFilterOp
       {/* Filter button */}
       <button
         onClick={onFilterOpen}
-        className={`flex items-center gap-1.5 px-4 py-2 rounded-full font-label-md text-label-md border transition-all whitespace-nowrap flex-shrink-0 ${
-          activeFilterCount > 0
-            ? 'bg-[#1F1F1F] text-primary border-primary'
-            : 'bg-[#121212] text-on-surface-variant border-[#2C2C2C] hover:border-outline'
-        }`}
+        className={pillClass(activeFilterCount > 0, 'flex items-center gap-1.5 flex-shrink-0')}
       >
         <span className="material-symbols-outlined text-[18px]">tune</span>
         {activeFilterCount > 0 ? `Filters (${activeFilterCount})` : 'Filter'}

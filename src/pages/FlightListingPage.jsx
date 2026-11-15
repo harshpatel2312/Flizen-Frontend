@@ -4,6 +4,7 @@ import Navbar from '../components/Navbar';
 import RouteInfoHeader from '../components/RouteInfoHeader';
 import FlightFilters from '../components/FlightFilters';
 import FlightFilterPanel, { DEFAULT_FILTERS, TIME_SLOTS } from '../components/FlightFilterPanel';
+import AirlineLogo from '../components/AirlineLogo';
 import FlightListCard from '../components/FlightListCard';
 import FlightDetailsPanel from '../components/FlightDetailsPanel';
 import Sep from '../components/Sep';
@@ -283,9 +284,9 @@ export default function FlightListingPage() {
         <Link
           to="/"
           onClick={clearFlightCache}
-          className="inline-flex items-center gap-2 text-primary hover:text-primary-container transition-colors mb-6"
+          className="inline-flex items-center gap-2 text-outline hover:text-primary transition-colors mb-6 font-label-md text-label-md"
         >
-          <span className="material-symbols-outlined">arrow_back</span>
+          <span className="material-symbols-outlined text-[18px]">arrow_back</span>
           <span>Back to Home</span>
         </Link>
 
@@ -364,17 +365,7 @@ export default function FlightListingPage() {
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        {selectedOutbound.airlineLogo ? (
-                          <img
-                            src={selectedOutbound.airlineLogo}
-                            alt={selectedOutbound.airline}
-                            className="w-8 h-8 rounded-full object-contain bg-[#1F1F1F]"
-                          />
-                        ) : (
-                          <div className="w-8 h-8 rounded-full bg-surface-container-high flex items-center justify-center">
-                            <span className="material-symbols-outlined text-primary text-sm">flight</span>
-                          </div>
-                        )}
+                        <AirlineLogo src={selectedOutbound.airlineLogo} name={selectedOutbound.airline} className="w-8 h-8" />
                         <div>
                           <p className="font-label-md text-label-md text-primary">{selectedOutbound.airline}</p>
                           <p className="font-label-sm text-label-sm text-outline mt-0.5">

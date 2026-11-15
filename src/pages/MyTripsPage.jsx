@@ -1,19 +1,21 @@
 // src/pages/MyTripsPage.jsx
 // ---------------------------------------------------------------------------
-// My Trips: the signed-in user's bookings, grouped into Upcoming / Pending /
-// Completed / Cancelled / Refunded, with a details panel for the selected trip.
+// My Trips: the signed-in user's bookings with Upcoming / Pending / Completed /
+// Cancelled / Refunded filters. Selecting a trip opens the Trip Details drawer;
+// the right column is reserved for the AI assistant (AIAssistantWorkspace).
 //
-// Routes: /trips and /trips/:bookingId (the selected trip is in the URL so it
-// can be linked to, and so Back closes the details view on mobile).
+// Routes: /trips and /trips/:bookingId (the open trip is in the URL so it can
+// be linked to, and so Back closes the drawer).
 // Data comes from the backend (GET /api/bookings and /api/bookings/:id/details),
 // which reads Firestore and enforces ownership.
 // ---------------------------------------------------------------------------
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import AIAssistantWorkspace from '../components/AIAssistantWorkspace';
 import Navbar from '../components/Navbar';
 import TripCard from '../components/trips/TripCard';
-import TripDetailsPanel from '../components/trips/TripDetailsPanel';
+import TripDetailsDrawer from '../components/trips/TripDetailsDrawer';
 import { useAuth } from '../context/AuthContext';
 import { getAirport } from '../services/apiService';
 import { listBookings } from '../services/bookingService';
@@ -24,18 +26,14 @@ import {
   tabCounts,
   tripsInCategories,
 } from '../utils/trips';
+import { pillClass } from '../utils/pillStyles';
 
-const tabPill = (active) =>
-  `inline-flex items-center gap-2 font-label-md text-label-md px-4 py-2 rounded-full transition-colors border whitespace-nowrap ${
-    active
-      ? 'bg-[#1F1F1F] text-primary border-primary'
-      : 'bg-[#121212] text-on-surface-variant hover:bg-surface-variant border-[#2C2C2C]'
-  }`;
+const tabPill = (active) => pillClass(active, 'inline-flex items-center gap-2');
 
 export default function MyTripsPage() {
   const { bookingId } = useParams();
   const navigate = useNavigate();
-  const { search } = useLocation();
+  const { search, state: locationState } = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const { user, loading: authLoading } = useAuth();
 
@@ -94,9 +92,17 @@ export default function MyTripsPage() {
   const selectTrip = (id) => {
     // Replace while switching trips so Back leaves the page instead of
     // stepping through every trip that was viewed.
-    navigate(`/trips/${encodeURIComponent(id)}${search}`, { replace: Boolean(bookingId) });
+    navigate(`/trips/${encodeURIComponent(id)}${search}`, {
+      replace: Boolean(bookingId),
+      state: { openedFromList: true },
+    });
   };
-  const closeTrip = () => navigate(`/trips${search}`);
+  // Opened from the list: step back so browser Back/Forward stay natural.
+  // Opened from a link: replace, so closing does not leave a dead history entry.
+  const closeTrip = () => {
+    if (locationState?.openedFromList) navigate(-1);
+    else navigate(`/trips${search}`, { replace: true });
+  };
   const changeTab = (id) => {
     const next = new URLSearchParams(searchParams);
     if (id === 'all') next.delete('tab');
@@ -126,11 +132,11 @@ export default function MyTripsPage() {
       <Navbar />
       <main className="max-w-7xl mx-auto px-container-margin py-8">
         {/* Header */}
-        <header className={`${bookingId ? 'hidden lg:flex' : 'flex'} flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6`}>
+        <header className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6">
           <div>
             <h1 className="font-headline-lg text-headline-lg text-primary">My Trips</h1>
             <p className="font-body-md text-body-md text-on-surface-variant mt-1">
-              Your bookings, itineraries, and payments in one place.
+              Pack your bags. We&apos;ve got the details.
             </p>
           </div>
           <Link
@@ -146,7 +152,7 @@ export default function MyTripsPage() {
         {!isLoading && hasTrips && (
           <nav
             aria-label="Trip filters"
-            className={`${bookingId ? 'hidden lg:flex' : 'flex'} gap-2 overflow-x-auto pb-1 mb-6`}
+            className="flex gap-2 overflow-x-auto pb-1 mb-6"
           >
             {TRIP_TABS.map((t) => (
               <button
@@ -157,7 +163,7 @@ export default function MyTripsPage() {
                 className={tabPill(tab === t.id)}
               >
                 {t.label}
-                <span className={`text-xs tabular-nums ${tab === t.id ? 'text-on-surface-variant' : 'text-outline'}`}>
+                <span className={`text-xs tabular-nums ${tab === t.id ? 'text-black/60' : 'text-outline'}`}>
                   {counts[t.id]}
                 </span>
               </button>
@@ -177,7 +183,7 @@ export default function MyTripsPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-gutter items-start">
           {/* List */}
-          <div className={`lg:col-span-2 flex-col gap-4 ${bookingId ? 'hidden lg:flex' : 'flex'}`}>
+          <div className="lg:col-span-2 flex flex-col gap-4">
             {isLoading && <LoadingList />}
 
             {!isLoading && !hasTrips && error && (
@@ -217,51 +223,29 @@ export default function MyTripsPage() {
             )}
 
             {!isLoading && hasTrips && (
-              tab === 'all' ? (
-                ALL_SECTIONS.map((section) => {
-                  const items = tripsInCategories(bookings, section.categories);
-                  if (!items.length) return null;
-                  return (
-                    <section key={section.id} className="flex flex-col gap-4">
-                      <h2 className="flex items-center gap-2 font-label-sm text-label-sm text-outline uppercase tracking-widest mt-2">
-                        {section.title}
-                        <span className="text-on-surface-variant">{items.length}</span>
-                      </h2>
-                      {items.map((b) => (
-                        <TripCard
-                          key={b.booking_id}
-                          booking={b}
-                          cityMap={cityMap}
-                          isSelected={b.booking_id === bookingId}
-                          onSelect={selectTrip}
-                        />
-                      ))}
-                    </section>
-                  );
-                })
-              ) : (
-                <TabList
-                  tab={tab}
-                  items={tripsInCategories(bookings, [tab])}
-                  cityMap={cityMap}
-                  selectedId={bookingId}
-                  onSelect={selectTrip}
-                />
-              )
+              <TabList
+                tab={tab}
+                items={tab === 'all'
+                  ? ALL_SECTIONS.flatMap((section) => tripsInCategories(bookings, section.categories))
+                  : tripsInCategories(bookings, [tab])}
+                cityMap={cityMap}
+                selectedId={bookingId}
+                onSelect={selectTrip}
+              />
             )}
           </div>
 
-          {/* Details */}
-          <div className={bookingId ? 'block' : 'hidden lg:block'}>
-            <TripDetailsPanel
-              bookingId={bookingId}
-              cityMap={cityMap}
-              onBack={closeTrip}
-              onUpdate={handleDetailsUpdate}
-            />
-          </div>
+          {/* Reserved right column — see AIAssistantWorkspace. */}
+          <AIAssistantWorkspace className="hidden lg:block" />
         </div>
       </main>
+
+      <TripDetailsDrawer
+        bookingId={bookingId}
+        cityMap={cityMap}
+        onClose={closeTrip}
+        onUpdate={handleDetailsUpdate}
+      />
     </div>
   );
 }
@@ -303,25 +287,33 @@ function LoadingList() {
   return (
     <div className="flex flex-col gap-4" aria-busy="true" aria-label="Loading your trips">
       {[0, 1, 2].map((i) => (
-        <div key={i} className="bg-[#121212] border border-[#2C2C2C] rounded-xl p-6 animate-pulse">
-          <div className="flex items-center justify-between mb-5">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-[#1F1F1F]" />
+        <div key={i} className="bg-[#121212] border border-[#2C2C2C] rounded-xl overflow-hidden animate-pulse">
+          <div className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-[#1F1F1F]" />
+                <div className="space-y-2">
+                  <div className="h-3 w-28 rounded bg-[#1F1F1F]" />
+                  <div className="h-2.5 w-36 rounded bg-[#1F1F1F]" />
+                </div>
+              </div>
+              <div className="h-6 w-20 rounded-full bg-[#1F1F1F]" />
+            </div>
+            <div className="mt-6 flex items-center justify-between">
               <div className="space-y-2">
-                <div className="h-3 w-28 rounded bg-[#1F1F1F]" />
-                <div className="h-2.5 w-20 rounded bg-[#1F1F1F]" />
+                <div className="h-6 w-16 rounded bg-[#1F1F1F]" />
+                <div className="h-3 w-24 rounded bg-[#1F1F1F]" />
+              </div>
+              <div className="h-px flex-1 mx-8 bg-[#1F1F1F]" />
+              <div className="space-y-2 flex flex-col items-end">
+                <div className="h-6 w-16 rounded bg-[#1F1F1F]" />
+                <div className="h-3 w-24 rounded bg-[#1F1F1F]" />
               </div>
             </div>
-            <div className="h-5 w-20 rounded-full bg-[#1F1F1F]" />
           </div>
-          <div className="flex items-center justify-between">
-            <div className="h-6 w-28 rounded bg-[#1F1F1F]" />
-            <div className="h-px flex-1 mx-6 bg-[#1F1F1F]" />
-            <div className="h-6 w-28 rounded bg-[#1F1F1F]" />
-          </div>
-          <div className="mt-5 pt-4 border-t border-[#2C2C2C] flex justify-between">
+          <div className="px-6 py-4 border-t border-[#2C2C2C] flex justify-between">
             <div className="h-3 w-32 rounded bg-[#1F1F1F]" />
-            <div className="h-3 w-16 rounded bg-[#1F1F1F]" />
+            <div className="h-4 w-20 rounded bg-[#1F1F1F]" />
           </div>
         </div>
       ))}
