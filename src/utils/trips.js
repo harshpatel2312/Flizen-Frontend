@@ -105,11 +105,11 @@ export function tabCounts(bookings, now = new Date()) {
   return counts;
 }
 
-/** Sections shown on the "All" tab, in reading order. */
+/** Reading order of the "All" tab: in progress, then upcoming, then past & closed. */
 export const ALL_SECTIONS = [
-  { id: 'pending',  title: 'In progress',   categories: ['pending'] },
-  { id: 'upcoming', title: 'Upcoming',      categories: ['upcoming'] },
-  { id: 'past',     title: 'Past & closed', categories: ['completed', 'cancelled', 'refunded'] },
+  { id: 'pending',  categories: ['pending'] },
+  { id: 'upcoming', categories: ['upcoming'] },
+  { id: 'past',     categories: ['completed', 'cancelled', 'refunded'] },
 ];
 
 /** Copy for an empty tab. */
@@ -167,6 +167,76 @@ export function formatTimestamp(value) {
 export function shortBookingId(id) {
   if (!id) return '';
   return id.length > 8 ? `${id.slice(0, 8)}…` : id;
+}
+
+/** "IB6252" -> "IB 6252". */
+export function formatFlightNumber(value) {
+  const m = /^([A-Z0-9]{2})(\d+[A-Z]?)$/.exec(String(value || '').trim());
+  return m ? `${m[1]} ${m[2]}` : value || null;
+}
+
+/** Airline shown on a trip card: the selling airline, with its logo and IATA code. */
+export function tripAirline(booking) {
+  const fs = booking?.flight_summary || {};
+  const itinerary = booking?.itinerary || {};
+  const firstSegment = itinerary.slices?.[0]?.segments?.[0] || {};
+  return {
+    name: itinerary.airline || fs.airline || firstSegment.airline || null,
+    logoUrl: itinerary.airline_logo_url || fs.airline_logo_url || null,
+    iataCode: firstSegment.airline_code || null,
+  };
+}
+
+/**
+ * One display leg per journey direction. Uses the stored itinerary (airport-local
+ * times, Duffel durations); bookings without one get date-only legs from the summary.
+ */
+export function tripLegs(booking, cityMap = {}) {
+  const city = (code, stored) => stored || cityMap[code] || null;
+  const slices = booking?.itinerary?.slices || [];
+
+  if (slices.length) {
+    return slices.map((slice, i) => {
+      const segments = slice.segments || [];
+      return {
+        label: slices.length > 1 ? (i === 0 ? 'Outbound' : 'Return') : null,
+        origin: slice.origin,
+        originCity: city(slice.origin, slice.origin_city),
+        destination: slice.destination,
+        destinationCity: city(slice.destination, slice.destination_city),
+        departingAt: slice.departing_at,
+        arrivingAt: slice.arriving_at,
+        duration: slice.duration,
+        stops: slice.stops ?? Math.max(segments.length - 1, 0),
+        stopCodes: segments.slice(0, -1).map((s) => s.destination).filter(Boolean),
+        flightNumbers: [...new Set(segments.map((s) => formatFlightNumber(s.flight_number)).filter(Boolean))],
+        hasSchedule: Boolean(slice.departing_at && slice.arriving_at),
+      };
+    });
+  }
+
+  const fs = booking?.flight_summary || {};
+  const leg = (from, to, date, label) => ({
+    label,
+    origin: from,
+    originCity: city(from),
+    destination: to,
+    destinationCity: city(to),
+    departingAt: date,
+    arrivingAt: null,
+    duration: null,
+    stops: null,
+    stopCodes: [],
+    flightNumbers: [],
+    hasSchedule: false,
+  });
+  if (!fs.from_airport && !fs.to_airport) return [];
+  return fs.is_round_trip
+    ? [
+        leg(fs.from_airport, fs.to_airport, fs.departure_date, 'Outbound'),
+        leg(fs.return_from_airport || fs.to_airport, fs.return_to_airport || fs.from_airport, fs.return_departure_date, 'Return'),
+      ]
+    : [leg(fs.from_airport, fs.to_airport, fs.departure_date, null)];
 }
 
 const TRAVELLER_TYPE = { adult: 'Adult', child: 'Child', infant: 'Infant' };

@@ -116,14 +116,18 @@ export async function listBookings() {
 }
 
 /**
- * GET /api/bookings/:id/details — owner-only trip view for My Trips:
- * itinerary, traveller names, and payment history (no Stripe ids or secrets).
+ * GET /api/bookings/:id/details — owner-only trip view for My Trips: itinerary,
+ * traveller names, fare details, and payment history (no Stripe ids or secrets).
+ * Errors carry `status` (401 = session expired, 404 = not found).
  */
 export async function fetchBookingDetails(bookingId) {
   const res = await fetch(`${API_BASE}/api/bookings/${encodeURIComponent(bookingId)}/details`, {
     headers: await authHeaders(),
   });
-  if (res.status === 404) throw new Error('This trip could not be found.');
-  if (!res.ok) throw new Error(await readError(res, 'Could not load trip details.'));
-  return res.json();
+  if (res.ok) return res.json();
+  const message =
+    res.status === 401 ? 'Your session has expired. Please sign in again.' :
+    res.status === 404 ? 'This trip could not be found.' :
+    await readError(res, 'Could not load trip details.');
+  throw Object.assign(new Error(message), { status: res.status });
 }
